@@ -1,0 +1,111 @@
+# RL-LLM Reinforcement Learning Project - Complete Requirements
+# Compatible with Python 3.8+
+
+# Core ML/DL Frameworks
+torch>=2.0.0
+transformers>=4.35.0
+tokenizers>=0.15.0
+accelerate>=0.25.0
+peft>=0.7.0  # For LoRA/QLoRA efficient fine-tuning
+
+# Reinforcement Learning
+trl>=0.7.0  # Transformers Reinforcement Learning
+# rl4lms>=0.2.0  # RL for Language Models (package not available - implement custom instead)
+
+# Data Processing & Datasets
+datasets>=2.14.0
+pandas>=1.5.0
+numpy>=1.24.0
+jsonlines>=4.0.0
+PyYAML>=6.0
+
+# Evaluation & Metrics
+evaluate>=0.4.0
+scikit-learn>=1.3.0
+rouge-score>=0.1.2
+nltk>=3.8
+
+# Visualization & Logging
+matplotlib>=3.7.0
+seaborn>=0.12.0
+tensorboard>=2.15.0
+wandb>=0.16.0  # Weights & Biases for experiment tracking
+plotly>=5.17.0
+
+# Development & Utilities
+tqdm>=4.66.0
+click>=8.1.0  # For CLI interfaces
+rich>=13.0.0  # Beautiful terminal output
+python-dotenv>=1.0.0
+psutil>=5.9.0  # System monitoring
+
+# Code Quality & Testing
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+pytest>=7.4.0
+pytest-cov>=4.1.0
+mypy>=1.7.0
+
+# Jupyter & Interactive Development
+jupyter>=1.0.0
+ipykernel>=6.25.0
+ipywidgets>=8.1.0
+jupyterlab>=4.0.0
+jupyter-contrib-nbextensions>=0.7.0
+jupyterlab-git>=0.44.0
+
+# Advanced Debugging & Profiling
+icecream>=2.1.3
+memory-profiler>=0.61.0
+py-spy>=0.3.14
+line-profiler>=4.1.0
+
+# Documentation
+sphinx>=7.2.0
+sphinx-rtd-theme>=1.3.0
+mkdocs>=1.5.0
+mkdocs-material>=9.4.0
+
+# Advanced Testing
+hypothesis>=6.88.0
+pytest-xdist>=3.3.0  # Parallel testing
+pytest-benchmark>=4.0.0
+
+# Static Analysis & Security
+pylint>=3.0.0
+bandit>=1.7.0  # Security linting
+vulture>=2.10.0  # Dead code detection
+
+# Type Checking Extensions
+types-PyYAML>=6.0.0
+types-requests>=2.31.0
+
+# GPU Memory Management
+bitsandbytes>=0.41.0  # For 8-bit/4-bit quantization
+# flash-attn>=2.3.0  # Flash Attention (optional, can cause install issues - install separately if needed)
+
+# Additional Math/Science Libraries
+scipy>=1.11.0
+sympy>=1.12.0  # For symbolic math in FinQA
+
+# File I/O & Storage
+h5py>=3.9.0
+zarr>=2.16.0
+
+# Configuration Management
+hydra-core>=1.3.0
+omegaconf>=2.3.0
+
+# Development Workflow
+pre-commit>=3.5.0
+jupytext>=1.15.0  # Sync notebooks with .py files
+
+# Optional: Advanced RL Libraries (uncomment if needed)
+# gym>=0.29.0
+# stable-baselines3>=2.2.0
+# tianshou>=0.5.0
+
+# Optional: Model Serving (uncomment if needed for deployment)
+# fastapi>=0.104.0
+# uvicorn>=0.24.0

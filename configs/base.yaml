@@ -1,0 +1,20 @@
+# Base configuration for all experiments
+seed: 42
+deterministic: true
+
+# Model settings
+model:
+  base_model: "meta-llama/Meta-Llama-3-8B-Instruct"
+  max_length: 2048
+  
+# Training settings  
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  learning_rate: 5e-5
+  num_epochs: 3
+  
+# Evaluation
+evaluation:
+  eval_steps: 500
+  save_steps: 1000

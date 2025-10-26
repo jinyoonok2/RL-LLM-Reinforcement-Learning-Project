@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "properties": {
+    "answer": {
+      "description": "Final numerical answer or string result",
+      "oneOf": [
+        {"type": "number"},
+        {"type": "string"}
+      ]
+    },
+    "program": {
+      "type": "array",
+      "description": "Step-by-step program execution",
+      "items": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["add", "subtract", "multiply", "divide", "greater", "table_max", "table_min", "table_sum", "table_average"]
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {"type": "number"},
+                {"type": "string"}
+              ]
+            }
+          },
+          "result": {
+            "oneOf": [
+              {"type": "number"},
+              {"type": "string"}
+            ]
+          }
+        },
+        "required": ["operation", "arguments", "result"]
+      }
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "Natural language explanation of the solution approach"
+    }
+  },
+  "required": ["answer"],
+  "additionalProperties": false
+}

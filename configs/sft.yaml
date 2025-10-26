@@ -1,0 +1,24 @@
+# SFT (Supervised Fine-Tuning) Configuration
+_base_: base.yaml
+
+training:
+  num_epochs: 2
+  learning_rate: 2e-5
+  batch_size: 2
+  gradient_accumulation_steps: 16
+  
+  # SFT specific
+  max_seq_length: 2048
+  packing: false
+  
+evaluation:
+  eval_strategy: "steps"
+  eval_steps: 200
+  
+# LoRA configuration for efficient training
+lora:
+  use_lora: true
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
