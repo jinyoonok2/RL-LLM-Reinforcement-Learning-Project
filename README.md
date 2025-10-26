@@ -38,8 +38,8 @@ This project implements reinforcement learning methods for training Large Langua
 
 4. **Download Data & Models**:
    ```bash
-   ./download.sh                # Download dataset + small test model
-   ./download.sh --full-model   # Download dataset + full research model
+   ./download.sh                # Dataset + DialoGPT-medium (863MB, for testing)
+   ./download.sh --full-model   # Dataset + Llama-3-8B (15GB, for research)
    ```
 
 5. **Test Installation**:
@@ -58,6 +58,8 @@ Make sure you have basic development tools installed on your system:
 # Ubuntu/Debian/WSL:
 sudo apt install python3 python3-venv python3-pip build-essential git
 ```
+
+**Dataset Download**: The FinQA dataset is downloaded directly from the official GitHub repository using git clone for reliability.
 
 ## 📁 Project Structure
 
@@ -95,7 +97,7 @@ sudo apt install python3 python3-venv python3-pip build-essential git
 ├── tests/                   # Unit tests
 ├── notebooks/               # Jupyter notebooks for analysis
 ├── docs/                    # Documentation
-├── download.sh              # Unified download script for data & models
+├── download.sh              # Reliable download script (git clone + HF models)
 └── test_setup.py            # Setup validation script
 ```
 
