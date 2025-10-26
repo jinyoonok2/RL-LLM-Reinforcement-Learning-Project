@@ -201,96 +201,47 @@ download_finqa_dataset() {
     
     print_status "Dataset not found or incomplete. Downloading FinQA dataset..."
     
-    # Check for required packages
-    check_python_package "datasets"
-    check_python_package "huggingface_hub"
-    
-    # Create Python script inline for dataset download
-    python << EOF
-import os
-import json
-import logging
-from pathlib import Path
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-def download_finqa():
-    try:
-        from datasets import load_dataset
+    # Download FinQA dataset via git clone (reliable method)
+    if command -v git >/dev/null 2>&1; then
+        TEMP_DIR=$(dirname "$OUTPUT_DIR")/temp_finqa
+        print_status "Cloning FinQA repository from GitHub..."
         
-        output_path = Path("$OUTPUT_DIR")
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        logger.info("Trying to download FinQA from HuggingFace...")
-        
-        # Try different dataset sources
-        dataset_sources = [
-            "ChilleD/FinQA",
-            "dreamerdeo/finqa",
-            "FinQA/finqa"
-        ]
-        
-        for source in dataset_sources:
-            try:
-                logger.info(f"Attempting download from: {source}")
-                dataset = load_dataset(source, token="$HF_TOKEN" if "$HF_TOKEN" else None)
-                
-                # Save each split
-                for split_name, split_data in dataset.items():
-                    output_file = output_path / f"{split_name}.json"
-                    
-                    # Convert to list and save
-                    data_list = [dict(item) for item in split_data]
-                    
-                    with open(output_file, 'w') as f:
-                        json.dump(data_list, f, indent=2)
-                    
-                    logger.info(f"Saved {len(data_list)} examples to {output_file}")
-                
-                logger.info("✅ FinQA dataset downloaded successfully")
-                print("SUCCESS")
-                return
-                
-            except Exception as e:
-                logger.warning(f"Source {source} failed: {e}")
-                continue
-        
-        # If all sources fail, try manual approach
-        logger.warning("HuggingFace sources failed, trying manual download...")
-        print("MANUAL_NEEDED")
-        
-    except ImportError:
-        logger.error("datasets package not available")
-        print("INSTALL_FAILED")
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        print("FAILED")
-
-download_finqa()
-EOF
-
-    # Check the result
-    if [ $? -eq 0 ]; then
-        if ls "$OUTPUT_DIR"/*.json >/dev/null 2>&1; then
-            print_success "✅ FinQA dataset downloaded to $OUTPUT_DIR"
+        if git clone https://github.com/czyssrs/FinQA.git "$TEMP_DIR" >/dev/null 2>&1; then
+            print_status "Git clone successful, copying dataset files..."
+            mkdir -p "$OUTPUT_DIR"
+            cp "$TEMP_DIR/dataset"/*.json "$OUTPUT_DIR/"
+            
+            # Rename dev.json to val.json for consistency
+            if [ -f "$OUTPUT_DIR/dev.json" ]; then
+                mv "$OUTPUT_DIR/dev.json" "$OUTPUT_DIR/val.json"
+            fi
+            
+            # Clean up temporary directory
+            rm -rf "$TEMP_DIR"
+            
+            print_success "✅ FinQA dataset downloaded successfully to $OUTPUT_DIR"
             
             # Show summary
             for file in "$OUTPUT_DIR"/*.json; do
                 if [ -f "$file" ]; then
                     count=$(python -c "import json; print(len(json.load(open('$file'))))" 2>/dev/null || echo "?")
-                    print_status "  - $(basename $file): $count examples"
+                    size=$(du -sh "$file" | cut -f1)
+                    print_status "  - $(basename $file): $count examples ($size)"
                 fi
             done
         else
-            print_error "Dataset download failed"
+            print_error "Git clone failed"
             print_status "Manual download instructions:"
             echo "1. Visit: https://github.com/czyssrs/FinQA"
             echo "2. Clone or download the repository"
             echo "3. Copy dataset files to $OUTPUT_DIR/"
             echo "   Required: train.json, dev.json (rename to val.json), test.json"
+            return 1
         fi
+    else
+        print_error "Git not available - please install git first"
+        print_status "Install git: sudo apt install git"
+        return 1
     fi
 }
 

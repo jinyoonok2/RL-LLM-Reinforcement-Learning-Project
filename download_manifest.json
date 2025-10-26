@@ -1,0 +1,9 @@
+{
+    "timestamp": "2025-10-26T06:36:52Z",
+    "dataset_downloaded": true,
+    "model_downloaded": false,
+    "model_name": "microsoft/DialoGPT-medium",
+    "dataset_dir": "datasets/finqa",
+    "model_dir": "models",
+    "project_size": "9.1G"
+}
