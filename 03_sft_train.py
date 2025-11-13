@@ -17,8 +17,9 @@ import json
 import logging
 import torch
 import importlib.util
+import yaml
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import numpy as np
 
@@ -28,7 +29,7 @@ try:
     from peft import LoraConfig, get_peft_model, TaskType
 except ImportError as e:
     print(f"Missing required packages: {e}")
-    print("Install with: pip install transformers peft torch tqdm")
+    print("Install with: pip install transformers peft torch tqdm pyyaml")
     exit(1)
 
 # Import shared utilities
@@ -87,6 +88,70 @@ class SFTConfig:
         for key, value in vars(args).items():
             if hasattr(config, key) and value is not None:
                 setattr(config, key, value)
+        return config
+    
+    @classmethod
+    def from_yaml(cls, yaml_path: str):
+        """
+        Create config from YAML file.
+        
+        Args:
+            yaml_path: Path to YAML config file
+            
+        Returns:
+            SFTConfig instance
+        """
+        with open(yaml_path, 'r') as f:
+            yaml_config = yaml.safe_load(f)
+        
+        config = cls()
+        
+        # Model settings
+        if 'model' in yaml_config:
+            config.base_model = yaml_config['model'].get('name', config.base_model)
+        
+        # LoRA settings
+        if 'lora' in yaml_config:
+            lora_cfg = yaml_config['lora']
+            config.use_lora = lora_cfg.get('use_lora', config.use_lora)
+            config.lora_r = lora_cfg.get('r', config.lora_r)
+            config.lora_alpha = lora_cfg.get('alpha', config.lora_alpha)
+            config.lora_dropout = lora_cfg.get('dropout', config.lora_dropout)
+            # Store target_modules for later use
+            config.lora_target_modules = lora_cfg.get('target_modules', None)
+        
+        # Training settings
+        if 'training' in yaml_config:
+            train_cfg = yaml_config['training']
+            config.epochs = train_cfg.get('epochs', config.epochs)
+            config.batch_size = train_cfg.get('batch_size', config.batch_size)
+            config.learning_rate = train_cfg.get('learning_rate', config.learning_rate)
+            config.warmup_steps = train_cfg.get('warmup_steps', config.warmup_steps)
+            config.max_length = train_cfg.get('max_length', config.max_length)
+            config.gradient_accumulation_steps = train_cfg.get('gradient_accumulation_steps', config.gradient_accumulation_steps)
+            config.fp16 = train_cfg.get('fp16', config.fp16)
+        
+        # Validation settings
+        if 'validation' in yaml_config:
+            val_cfg = yaml_config['validation']
+            config.eval_steps = val_cfg.get('eval_steps', config.eval_steps)
+            config.save_steps = val_cfg.get('save_steps', config.save_steps)
+            config.logging_steps = val_cfg.get('logging_steps', config.logging_steps)
+        
+        # Generation settings
+        if 'generation' in yaml_config:
+            gen_cfg = yaml_config['generation']
+            config.max_new_tokens = gen_cfg.get('max_new_tokens', config.max_new_tokens)
+            config.temperature = gen_cfg.get('temperature', config.temperature)
+            config.top_p = gen_cfg.get('top_p', config.top_p)
+        
+        # Path settings
+        if 'paths' in yaml_config:
+            paths_cfg = yaml_config['paths']
+            config.data_dir = paths_cfg.get('data_dir', config.data_dir)
+            config.output_dir = paths_cfg.get('output_dir', config.output_dir)
+            config.reward_spec = paths_cfg.get('reward_spec', config.reward_spec)
+        
         return config
 
 
@@ -192,12 +257,30 @@ def setup_model(config: SFTConfig):
     # Apply LoRA if specified
     if config.use_lora:
         logger.info("Applying LoRA adapters")
+        
+        # Determine target modules
+        if hasattr(config, 'lora_target_modules') and config.lora_target_modules:
+            target_modules = config.lora_target_modules
+            logger.info(f"Using specified LoRA targets: {target_modules}")
+        else:
+            # Auto-detect based on model name
+            model_name_lower = config.base_model.lower()
+            if 'llama' in model_name_lower or 'mistral' in model_name_lower:
+                target_modules = ["q_proj", "v_proj", "k_proj", "o_proj"]
+                logger.info(f"Detected Llama-style model, using targets: {target_modules}")
+            elif 'gpt' in model_name_lower:
+                target_modules = ["c_attn", "c_proj"]
+                logger.info(f"Detected GPT-style model, using targets: {target_modules}")
+            else:
+                target_modules = None  # Let PEFT auto-detect
+                logger.info("Using PEFT auto-detection for target modules")
+        
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             r=config.lora_r,
             lora_alpha=config.lora_alpha,
             lora_dropout=config.lora_dropout,
-            target_modules=["c_attn", "c_proj"]  # For GPT-2 style models
+            target_modules=target_modules
         )
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
@@ -207,6 +290,10 @@ def setup_model(config: SFTConfig):
 
 def main():
     parser = argparse.ArgumentParser(description="Supervised Fine-Tuning for FinQA")
+    
+    # Config file argument
+    parser.add_argument("--config", type=str,
+                       help="Path to YAML config file (overrides other arguments)")
     
     # Model arguments
     parser.add_argument("--base_model", type=str, default="microsoft/DialoGPT-medium",
@@ -242,8 +329,17 @@ def main():
     
     args = parser.parse_args()
     
-    # Create config
-    config = SFTConfig.from_args(args)
+    # Create config from YAML or command line args
+    if args.config:
+        logger.info(f"📄 Loading config from: {args.config}")
+        config = SFTConfig.from_yaml(args.config)
+        # Command line args can still override YAML config
+        if args.quick_test:
+            config.epochs = 1
+        if args.skip_validation:
+            config.skip_validation = True
+    else:
+        config = SFTConfig.from_args(args)
     
     # Set random seeds
     torch.manual_seed(config.seed)

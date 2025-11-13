@@ -36,6 +36,7 @@ venv.bak/
 *.safetensors
 checkpoints/
 models/
+!configs/models/  # Allow model config files
 
 # Jupyter Notebook
 .ipynb_checkpoints
