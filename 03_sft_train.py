@@ -7,9 +7,9 @@ This module performs standard supervised learning to teach the model basic skill
 before RL training. Uses cross-entropy loss for training and reward function for monitoring.
 
 Usage:
-    python src/03_sft_train.py --data_dir datasets/finqa_processed --base_model microsoft/DialoGPT-medium
-    python src/03_sft_train.py --data_dir datasets/finqa_processed --base_model microsoft/DialoGPT-medium --use_lora
-    python src/03_sft_train.py --data_dir datasets/finqa_processed --epochs 3 --batch_size 8 --lr 2e-5
+    python 03_sft_train.py --data_dir datasets/finqa_processed --base_model microsoft/DialoGPT-medium
+    python 03_sft_train.py --data_dir datasets/finqa_processed --base_model microsoft/DialoGPT-medium --use_lora
+    python 03_sft_train.py --data_dir datasets/finqa_processed --epochs 3 --batch_size 8 --lr 2e-5
 """
 
 import argparse

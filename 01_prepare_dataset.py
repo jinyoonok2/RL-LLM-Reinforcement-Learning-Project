@@ -9,8 +9,8 @@ The Ternary Reward Method addresses the challenge of empty/missing answers:
 - -1: Completely incorrect or nonsensical
 
 Usage:
-    python src/01_prepare_dataset.py --input_dir datasets/finqa --output_dir datasets/finqa_processed
-    python src/01_prepare_dataset.py --input_dir datasets/finqa --output_dir datasets/finqa_processed --model_name microsoft/DialoGPT-medium
+    python 01_prepare_dataset.py --input_dir datasets/finqa --output_dir datasets/finqa_processed
+    python 01_prepare_dataset.py --input_dir datasets/finqa --output_dir datasets/finqa_processed --model_name microsoft/DialoGPT-medium
 """
 
 import argparse
@@ -536,7 +536,7 @@ def main():
     
     print(f"\n💡 Next steps:")
     print(f"  1. Review reward examples: cat {output_dir}/reward_examples.json")
-    print(f"  2. Start training: python src/03_sft_train.py --data_dir {output_dir}")
+    print(f"  2. Start training: python 03_sft_train.py --data_dir {output_dir}")
     
     return 0
 

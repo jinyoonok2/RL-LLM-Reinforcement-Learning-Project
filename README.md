@@ -77,20 +77,23 @@ sudo apt install python3 python3-venv python3-pip build-essential git
 │   ├── ppo.yaml             # PPO training config
 │   └── schema.json          # FinQA output schema
 │
-├── src/                     # Source code modules (to be implemented)
-│   ├── 00_check_data.py     # Data validation
-│   ├── 01_prepare_dataset.py # Dataset preparation
-│   ├── 02_build_rewards.py  # Reward function implementation
-│   ├── 03_sft_train.py      # Supervised fine-tuning
-│   ├── 04_sample_candidates.py # Candidate generation
-│   ├── 05_train_ppo.py      # PPO training
-│   ├── 06_train_grpo.py     # GRPO training
-│   ├── 07_train_rloo.py     # RLOO training
-│   ├── 08_build_prefs.py    # Preference pair construction
-│   ├── 09_train_dpo.py      # DPO training
-│   ├── 10_evaluate.py       # Evaluation framework
-│   ├── 11_compare_runs.py   # Results comparison
-│   └── 12_driver.py         # Full pipeline orchestration
+├── 00_check_data.py         # Data validation
+├── 01_prepare_dataset.py    # Dataset preparation
+├── 02_build_rewards.py      # Reward function implementation
+├── 03_sft_train.py          # Supervised fine-tuning
+├── 04_sample_candidates.py  # Candidate generation (TBD)
+├── 05_train_ppo.py          # PPO training (TBD)
+├── 06_train_grpo.py         # GRPO training (TBD)
+├── 07_train_rloo.py         # RLOO training (TBD)
+├── 08_build_prefs.py        # Preference pair construction (TBD)
+├── 09_train_dpo.py          # DPO training (TBD)
+├── 10_evaluate.py           # Evaluation framework (TBD)
+├── 11_compare_runs.py       # Results comparison (TBD)
+├── 12_driver.py             # Full pipeline orchestration (TBD)
+│
+├── utils/                   # Shared utilities
+│   ├── evaluation.py        # ModelEvaluator for validation/testing
+│   └── trainer.py           # SFTTrainer for training loops
 │
 ├── datasets/finqa/          # FinQA dataset files
 ├── outputs/finqa_rl/        # Experiment outputs
@@ -463,10 +466,10 @@ Before connecting modules, ensure each passes these criteria:
 source activate.sh
 
 # Run individual modules
-python src/00_check_data.py --data_root datasets/finqa/
+python 00_check_data.py --data_root datasets/finqa/
 
 # Or use the driver for full pipeline
-python src/12_driver.py --method ppo --run_id run_001
+python 12_driver.py --method ppo --run_id run_001
 ```
 
 ### Adding Dependencies
@@ -481,10 +484,10 @@ pip freeze > requirements.txt
 ### Code Quality
 ```bash
 # Format code
-black src/ && isort src/
+black *.py utils/ && isort *.py utils/
 
 # Run linting
-flake8 src/
+flake8 *.py utils/
 
 # Run tests
 python -m pytest tests/

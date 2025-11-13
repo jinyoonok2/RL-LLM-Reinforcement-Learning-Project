@@ -8,8 +8,8 @@ will use to evaluate model outputs. It integrates with the ternary reward calcul
 01_prepare_dataset.py and adds additional reward components.
 
 Usage:
-    python src/02_build_rewards.py --schema configs/schema.json --output_dir outputs/finqa_rl/02_rewards
-    python src/02_build_rewards.py --weights "exact=1.0,program=0.3,format=0.2" --run_tests
+    python 02_build_rewards.py --schema configs/schema.json --output_dir outputs/finqa_rl/02_rewards
+    python 02_build_rewards.py --weights "exact=1.0,program=0.3,format=0.2" --run_tests
 """
 
 import argparse
@@ -703,7 +703,7 @@ def main():
     
     print("\n💡 Next steps:")
     print(f"  1. Review reward spec: cat {output_dir}/reward_spec.yaml")
-    print(f"  2. Test on real data: python src/03_sft_train.py --reward_spec {output_dir}/reward_spec.yaml")
+    print(f"  2. Test on real data: python 03_sft_train.py --reward_spec {output_dir}/reward_spec.yaml")
     
     return 0
 

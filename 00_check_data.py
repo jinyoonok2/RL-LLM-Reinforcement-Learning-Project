@@ -4,9 +4,9 @@ FinQA Dataset Validation Script
 Validates the FinQA dataset format, quality, and provides comprehensive analysis.
 
 Usage:
-    python src/00_check_data.py --data_root datasets/finqa
-    python src/00_check_data.py --data_root datasets/finqa --detailed
-    python src/00_check_data.py --data_root datasets/finqa --sample 5
+    python 00_check_data.py --data_root datasets/finqa
+    python 00_check_data.py --data_root datasets/finqa --detailed
+    python 00_check_data.py --data_root datasets/finqa --sample 5
 """
 
 import argparse

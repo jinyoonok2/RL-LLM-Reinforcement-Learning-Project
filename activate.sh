@@ -36,5 +36,5 @@ python -c "import torch; print(f'Available (devices: {torch.cuda.device_count()}
 echo ""
 echo "Environment is ready! You can now:"
 echo "  - Run ./download.sh to get datasets and models"
-echo "  - Start development with the modules in src/"
+echo "  - Start development with the module files (00_*.py, etc.)"
 echo "  - Use 'deactivate' to exit the virtual environment"
