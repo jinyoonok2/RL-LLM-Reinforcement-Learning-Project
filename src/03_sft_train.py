@@ -16,30 +16,23 @@ import argparse
 import json
 import logging
 import torch
-import os
 import importlib.util
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
-from datetime import datetime
-from tqdm import tqdm
+from typing import Dict, List, Any
+from dataclasses import dataclass
 import numpy as np
 
 try:
-    from transformers import (
-        AutoModelForCausalLM,
-        AutoTokenizer,
-        TrainingArguments,
-        Trainer,
-        DataCollatorForLanguageModeling,
-        get_linear_schedule_with_warmup
-    )
-    from torch.utils.data import Dataset, DataLoader
-    from peft import LoraConfig, get_peft_model, TaskType, PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from torch.utils.data import Dataset
+    from peft import LoraConfig, get_peft_model, TaskType
 except ImportError as e:
     print(f"Missing required packages: {e}")
     print("Install with: pip install transformers peft torch tqdm")
     exit(1)
+
+# Import shared utilities
+from utils.trainer import SFTTrainer
 
 # Setup logging
 logging.basicConfig(
@@ -160,328 +153,56 @@ class FinQADataset(Dataset):
         }
 
 
-class SFTTrainer:
-    """Trainer for supervised fine-tuning."""
-    
-    def __init__(self, config: SFTConfig):
-        self.config = config
-        self.device = torch.device(config.device)
-        
-        # Set seed
-        torch.manual_seed(config.seed)
-        np.random.seed(config.seed)
-        
-        # Create output directories
-        self.output_dir = Path(config.output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        (self.output_dir / 'logs').mkdir(exist_ok=True)
-        (self.output_dir / 'ckpt_sft').mkdir(exist_ok=True)
-        (self.output_dir / 'valid_samples').mkdir(exist_ok=True)
-        
-        # Load tokenizer and model
-        logger.info(f"Loading model: {config.base_model}")
-        self.tokenizer = AutoTokenizer.from_pretrained(config.base_model)
-        
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-        
-        self.model = AutoModelForCausalLM.from_pretrained(
-            config.base_model,
-            torch_dtype=torch.float16 if config.fp16 else torch.float32
+def load_reward_function():
+    """Load reward function from 02_build_rewards.py."""
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "rewards",
+            Path(__file__).parent / "02_build_rewards.py"
         )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         
-        # Apply LoRA if specified
-        if config.use_lora:
-            logger.info("Applying LoRA adapters")
-            peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM,
-                r=config.lora_r,
-                lora_alpha=config.lora_alpha,
-                lora_dropout=config.lora_dropout,
-                target_modules=["c_attn", "c_proj"]  # For GPT-2 style models
-            )
-            self.model = get_peft_model(self.model, peft_config)
-            self.model.print_trainable_parameters()
-        
-        self.model.to(self.device)
-        
-        # Load reward function for validation
-        self.reward_fn = self._load_reward_function()
-        
-        # Training tracking
-        self.global_step = 0
-        self.best_val_reward = -float('inf')
-        self.train_losses = []
-        self.val_rewards = []
+        reward_fn = module.FinQARewardFunction()
+        logger.info("✅ Loaded reward function for validation")
+        return reward_fn
+    except Exception as e:
+        logger.warning(f"Could not load reward function: {e}")
+        return None
+
+
+def setup_model(config: SFTConfig):
+    """
+    Setup model and tokenizer with optional LoRA.
     
-    def _load_reward_function(self):
-        """Load reward function from 02_build_rewards.py."""
-        try:
-            spec = importlib.util.spec_from_file_location(
-                "rewards",
-                Path(__file__).parent / "02_build_rewards.py"
-            )
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            
-            reward_fn = module.FinQARewardFunction()
-            logger.info("✅ Loaded reward function for validation")
-            return reward_fn
-        except Exception as e:
-            logger.warning(f"Could not load reward function: {e}")
-            return None
+    Returns:
+        tuple: (model, tokenizer)
+    """
+    logger.info(f"Loading model: {config.base_model}")
+    tokenizer = AutoTokenizer.from_pretrained(config.base_model)
     
-    def train(self, train_dataset: FinQADataset, val_dataset: FinQADataset):
-        """Main training loop."""
-        logger.info("🚀 Starting SFT training")
-        
-        # Create data loaders
-        train_loader = DataLoader(
-            train_dataset,
-            batch_size=self.config.batch_size,
-            shuffle=True,
-            num_workers=0
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    
+    model = AutoModelForCausalLM.from_pretrained(
+        config.base_model,
+        torch_dtype=torch.float16 if config.fp16 else torch.float32
+    )
+    
+    # Apply LoRA if specified
+    if config.use_lora:
+        logger.info("Applying LoRA adapters")
+        peft_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            r=config.lora_r,
+            lora_alpha=config.lora_alpha,
+            lora_dropout=config.lora_dropout,
+            target_modules=["c_attn", "c_proj"]  # For GPT-2 style models
         )
-        
-        # Setup optimizer and scheduler
-        optimizer = torch.optim.AdamW(
-            self.model.parameters(),
-            lr=self.config.learning_rate
-        )
-        
-        total_steps = len(train_loader) * self.config.epochs // self.config.gradient_accumulation_steps
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=self.config.warmup_steps,
-            num_training_steps=total_steps
-        )
-        
-        # Training loop
-        self.model.train()
-        for epoch in range(self.config.epochs):
-            logger.info(f"\n📖 Epoch {epoch + 1}/{self.config.epochs}")
-            epoch_loss = 0
-            progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}")
-            
-            optimizer.zero_grad()
-            
-            for step, batch in enumerate(progress_bar):
-                # Move to device
-                input_ids = batch['input_ids'].to(self.device)
-                attention_mask = batch['attention_mask'].to(self.device)
-                labels = batch['labels'].to(self.device)
-                
-                # Forward pass
-                outputs = self.model(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    labels=labels
-                )
-                
-                loss = outputs.loss / self.config.gradient_accumulation_steps
-                loss.backward()
-                
-                epoch_loss += loss.item()
-                
-                # Update weights
-                if (step + 1) % self.config.gradient_accumulation_steps == 0:
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-                    optimizer.step()
-                    scheduler.step()
-                    optimizer.zero_grad()
-                    self.global_step += 1
-                    
-                    # Logging
-                    if self.global_step % self.config.logging_steps == 0:
-                        avg_loss = epoch_loss / (step + 1)
-                        self.train_losses.append(avg_loss)
-                        progress_bar.set_postfix({
-                            'loss': f'{avg_loss:.4f}',
-                            'lr': f'{scheduler.get_last_lr()[0]:.2e}'
-                        })
-                    
-                    # Validation
-                    if self.global_step % self.config.eval_steps == 0 and not getattr(self.config, 'skip_validation', False):
-                        val_reward = self.validate(val_dataset)
-                        self.val_rewards.append(val_reward)
-                        self.model.train()
-                    
-                    # Save checkpoint
-                    if self.global_step % self.config.save_steps == 0:
-                        self.save_checkpoint(f"step_{self.global_step}")
-            
-            # End of epoch validation
-            if not getattr(self.config, 'skip_validation', False):
-                val_reward = self.validate(val_dataset)
-                logger.info(f"Epoch {epoch + 1} - Avg Loss: {epoch_loss / len(train_loader):.4f}, Val Reward: {val_reward:.4f}")
-            else:
-                logger.info(f"Epoch {epoch + 1} - Avg Loss: {epoch_loss / len(train_loader):.4f}")
-        
-        # Save final model
-        self.save_checkpoint("final")
-        self.save_training_logs()
-        
-        logger.info("✅ Training complete!")
+        model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
     
-    def validate(self, val_dataset: FinQADataset, num_samples: int = 50) -> float:
-        """Validate model and compute average reward."""
-        logger.info("📊 Running validation...")
-        self.model.eval()
-        
-        total_reward = 0
-        valid_samples = []
-        parse_success = 0
-        
-        # Sample random examples
-        indices = np.random.choice(len(val_dataset), min(num_samples, len(val_dataset)), replace=False)
-        
-        with torch.no_grad():
-            for idx in tqdm(indices, desc="Validation"):
-                example = val_dataset[idx]
-                
-                # Generate prediction
-                input_text = val_dataset.examples[idx]['input_text']
-                prediction = self.generate(input_text)
-                ground_truth = example['ground_truth']
-                
-                # Calculate reward if reward function available
-                if self.reward_fn:
-                    reward = self.reward_fn.calculate(
-                        prediction=prediction,
-                        ground_truth=ground_truth,
-                        question=example['question']
-                    )
-                    total_reward += reward.total
-                    
-                    # Check if valid JSON
-                    try:
-                        json.loads(prediction)
-                        parse_success += 1
-                        parse_ok = True
-                    except:
-                        parse_ok = False
-                    
-                    valid_samples.append({
-                        'example_id': example['example_id'],
-                        'question': example['question'][:100],
-                        'prediction': prediction[:200],
-                        'ground_truth': ground_truth,
-                        'reward': reward.total,
-                        'parse_ok': parse_ok
-                    })
-        
-        avg_reward = total_reward / len(indices) if len(indices) > 0 else 0
-        parse_rate = parse_success / len(indices) if len(indices) > 0 else 0
-        
-        # Save validation samples
-        self.save_valid_samples(valid_samples)
-        
-        logger.info(f"Validation Results:")
-        logger.info(f"  Avg Reward: {avg_reward:.4f}")
-        logger.info(f"  Parse Rate: {parse_rate:.2%}")
-        
-        # Save best model
-        if avg_reward > self.best_val_reward:
-            self.best_val_reward = avg_reward
-            self.save_checkpoint("best")
-            logger.info(f"  🎉 New best model! Reward: {avg_reward:.4f}")
-        
-        return avg_reward
-    
-    def generate(self, input_text: str) -> str:
-        """Generate prediction for input text with robust error handling."""
-        try:
-            # Move to CPU to avoid CUDA issues during generation
-            self.model.cpu()
-            
-            inputs = self.tokenizer(
-                input_text,
-                return_tensors='pt',
-                truncation=True,
-                max_length=self.config.max_length
-            )
-            
-            # Use greedy decoding (most stable)
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    input_ids=inputs['input_ids'],
-                    attention_mask=inputs['attention_mask'],
-                    max_new_tokens=min(self.config.max_new_tokens, 64),  # Limit length
-                    do_sample=False,  # Greedy (no sampling)
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    eos_token_id=self.tokenizer.eos_token_id,
-                    num_beams=1,
-                    early_stopping=True
-                )
-            
-            # Move back to device
-            self.model.to(self.device)
-            
-            # Decode only the generated part
-            generated_ids = outputs[0][inputs['input_ids'].shape[1]:]
-            prediction = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
-            
-            return prediction.strip()
-        
-        except Exception as e:
-            # Move back to device even on error
-            self.model.to(self.device)
-            logger.warning(f"Generation failed: {str(e)[:100]}, returning empty")
-            return ""
-    
-    def save_checkpoint(self, name: str):
-        """Save model checkpoint."""
-        ckpt_dir = self.output_dir / 'ckpt_sft' / name
-        ckpt_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Save model and tokenizer
-        if self.config.use_lora:
-            self.model.save_pretrained(ckpt_dir)
-        else:
-            self.model.save_pretrained(ckpt_dir)
-        
-        self.tokenizer.save_pretrained(ckpt_dir)
-        
-        logger.info(f"💾 Saved checkpoint: {ckpt_dir}")
-    
-    def save_valid_samples(self, samples: List[Dict]):
-        """Save validation samples."""
-        output_file = self.output_dir / 'valid_samples' / f'step_{self.global_step}.json'
-        with open(output_file, 'w') as f:
-            json.dump(samples, f, indent=2)
-    
-    def save_training_logs(self):
-        """Save training logs and metrics."""
-        logs = {
-            'config': asdict(self.config),
-            'train_losses': self.train_losses,
-            'val_rewards': self.val_rewards,
-            'best_val_reward': self.best_val_reward,
-            'total_steps': self.global_step
-        }
-        
-        log_file = self.output_dir / 'logs' / 'training_log.json'
-        with open(log_file, 'w') as f:
-            json.dump(logs, f, indent=2)
-        
-        logger.info(f"📝 Saved training logs: {log_file}")
-    
-    def save_manifest(self):
-        """Save module manifest."""
-        manifest = {
-            'module': '03_sft_train',
-            'version': '1.0.0',
-            'timestamp': datetime.now().isoformat(),
-            'config': asdict(self.config),
-            'best_val_reward': self.best_val_reward,
-            'total_steps': self.global_step
-        }
-        
-        manifest_file = self.output_dir / 'manifest.json'
-        with open(manifest_file, 'w') as f:
-            json.dump(manifest, f, indent=2)
-        
-        logger.info(f"✅ Saved manifest: {manifest_file}")
+    return model, tokenizer
 
 
 def main():
@@ -524,8 +245,12 @@ def main():
     # Create config
     config = SFTConfig.from_args(args)
     
+    # Set random seeds
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
+    
     logger.info("="*70)
-    logger.info("🚀 FinQA Supervised Fine-Tuning")
+    logger.info("🚀 FinQA Supervised Fine-Tuning (Refactored)")
     logger.info("="*70)
     logger.info(f"Base Model: {config.base_model}")
     logger.info(f"Use LoRA: {config.use_lora}")
@@ -545,12 +270,12 @@ def main():
         logger.error("Run 01_prepare_dataset.py first!")
         return 1
     
-    # Create trainer
-    trainer = SFTTrainer(config)
+    # Setup model and tokenizer
+    model, tokenizer = setup_model(config)
     
-    # Load tokenizer for datasets
-    train_dataset = FinQADataset(train_file, trainer.tokenizer, config.max_length)
-    val_dataset = FinQADataset(val_file, trainer.tokenizer, config.max_length)
+    # Load datasets
+    train_dataset = FinQADataset(train_file, tokenizer, config.max_length)
+    val_dataset = FinQADataset(val_file, tokenizer, config.max_length)
     
     # Quick test mode
     if args.quick_test:
@@ -565,6 +290,17 @@ def main():
     if args.skip_validation:
         config.skip_validation = True
         logger.info("⏭️  Skipping validation (training only)")
+    
+    # Load reward function
+    reward_fn = load_reward_function()
+    
+    # Create trainer with utilities
+    trainer = SFTTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        config=config,
+        reward_fn=reward_fn
+    )
     
     # Train
     trainer.train(train_dataset, val_dataset)
