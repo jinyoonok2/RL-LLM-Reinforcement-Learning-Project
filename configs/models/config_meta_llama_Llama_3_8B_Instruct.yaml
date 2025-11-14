@@ -17,8 +17,8 @@ lora:
   - o_proj
 training:
   epochs: 3
-  batch_size: 2
-  gradient_accumulation_steps: 8
+  batch_size: 1
+  gradient_accumulation_steps: 4
   learning_rate: 2.0e-05
   warmup_steps: 100
   max_length: 512
