@@ -21,9 +21,15 @@ def format_context(example: Dict) -> str:
     """Format question context from FinQA example."""
     parts = []
     
+    # Handle pre_text (can be string or list)
     if example.get('pre_text'):
-        parts.append(example['pre_text'])
+        pre_text = example['pre_text']
+        if isinstance(pre_text, list):
+            parts.extend(pre_text)
+        else:
+            parts.append(pre_text)
     
+    # Handle table
     if example.get('table'):
         table = example['table']
         if isinstance(table, list) and table:
@@ -32,8 +38,13 @@ def format_context(example: Dict) -> str:
                 if isinstance(row, list):
                     parts.append("  | " + " | ".join(str(cell) for cell in row))
     
+    # Handle post_text (can be string or list)
     if example.get('post_text'):
-        parts.append(example['post_text'])
+        post_text = example['post_text']
+        if isinstance(post_text, list):
+            parts.extend(post_text)
+        else:
+            parts.append(post_text)
     
     return "\n".join(parts)
 
