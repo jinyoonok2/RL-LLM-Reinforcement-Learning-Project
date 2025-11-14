@@ -135,11 +135,22 @@ def main():
                        help="Input directory with raw FinQA data")
     parser.add_argument("--output_dir", type=str, default="datasets/finqa_processed",
                        help="Output directory for processed data")
+    parser.add_argument("--config", type=str,
+                       help="Path to model config YAML file (e.g., configs/models/config_meta_llama_Llama_3_8B_Instruct.yaml)")
     parser.add_argument("--model_name", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct",
-                       help="Model name for tokenizer")
+                       help="Model name for tokenizer (overridden by --config if provided)")
     args = parser.parse_args()
     
-    prepare_finqa_dataset(args.input_dir, args.output_dir, args.model_name)
+    # Load model name from config if provided
+    model_name = args.model_name
+    if args.config:
+        import yaml
+        with open(args.config, 'r') as f:
+            config = yaml.safe_load(f)
+        model_name = config.get('model', {}).get('name', model_name)
+        print(f"Using model from config: {model_name}")
+    
+    prepare_finqa_dataset(args.input_dir, args.output_dir, model_name)
 
 
 if __name__ == "__main__":
