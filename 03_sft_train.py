@@ -358,8 +358,8 @@ def main():
     
     # Load datasets
     data_dir = Path(config.data_dir)
-    train_file = data_dir / 'train_processed.json'
-    val_file = data_dir / 'val_processed.json'
+    train_file = data_dir / 'train.jsonl'
+    val_file = data_dir / 'val.jsonl'
     
     if not train_file.exists() or not val_file.exists():
         logger.error(f"Preprocessed data not found in {data_dir}")
