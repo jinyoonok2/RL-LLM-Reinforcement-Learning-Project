@@ -137,7 +137,7 @@ def main():
                        help="Component weights (comma-separated key=value pairs)")
     parser.add_argument("--run_tests", action="store_true",
                        help="Run unit tests on reward function")
-    args = args.parse_args()
+    args = parser.parse_args()
     
     weights = parse_weights(args.weights)
     build_reward_spec(args.output_dir, weights, args.run_tests)
