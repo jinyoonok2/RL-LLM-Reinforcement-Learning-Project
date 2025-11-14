@@ -33,8 +33,8 @@ generation:
   top_p: 0.9
 paths:
   data_dir: datasets/finqa_processed
-  output_dir: outputs/finqa_rl/run_001/03_sft_TinyLlama_1.1B
-  reward_spec: outputs/finqa_rl/02_rewards/reward_spec.yaml
+  output_dir: outputs/run_001/03_sft_TinyLlama_1.1B
+  reward_spec: outputs/run_001/02_rewards/reward_spec.yaml
 metadata:
   generated_by: manual template (TinyLlama)
   notes: Small Llama-architecture model good for testing

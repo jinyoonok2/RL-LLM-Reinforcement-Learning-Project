@@ -1,0 +1,38 @@
+# DPO (Direct Preference Optimization) Algorithm Configuration
+# Use with: python 09_train_dpo.py --config configs/models/<model>.yaml --algo_config configs/algorithms/dpo.yaml
+
+# Core DPO hyperparameters
+learning_rate: 5e-7          # Lower LR for DPO (more stable)
+batch_size: 4
+gradient_accumulation_steps: 16
+
+# DPO-specific parameters
+beta: 0.1                    # Temperature parameter (controls KL regularization)
+label_smoothing: 0.0         # Label smoothing for preference pairs
+loss_type: "sigmoid"         # Loss type: "sigmoid" or "hinge"
+
+# Reference model
+use_reference_model: true    # Use frozen SFT model as reference
+reference_free: false        # Reference-free DPO variant
+
+# Training schedule
+num_epochs: 3
+save_freq: 1                 # Save checkpoint every N epochs
+eval_freq: 1                 # Evaluate every N epochs
+
+# Data
+max_prompt_length: 512
+max_length: 1024             # Max total sequence length (prompt + response)
+
+# Optimization
+warmup_steps: 100
+lr_scheduler: "cosine"       # Learning rate scheduler
+weight_decay: 0.0
+
+# Stability
+clip_grad_norm: 1.0
+max_grad_norm: 10.0
+
+# Logging
+log_with: "wandb"            # wandb, tensorboard, or none
+logging_steps: 10

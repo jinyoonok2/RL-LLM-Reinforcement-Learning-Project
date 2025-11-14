@@ -215,8 +215,8 @@ def generate_model_config(model_info: Dict, output_dir: Path) -> Path:
         },
         'paths': {
             'data_dir': 'datasets/finqa_processed',
-            'output_dir': f'outputs/finqa_rl/run_001/03_sft_{safe_name}',
-            'reward_spec': 'outputs/finqa_rl/02_rewards/reward_spec.yaml',
+            'output_dir': f'outputs/run_001/03_sft_{safe_name}',
+            'reward_spec': 'outputs/run_001/02_rewards/reward_spec.yaml',
         },
         'metadata': {
             'generated_by': 'inspect_model_architecture.py',

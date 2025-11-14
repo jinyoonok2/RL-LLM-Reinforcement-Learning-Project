@@ -1,0 +1,33 @@
+# GRPO (Group Relative Policy Optimization) Algorithm Configuration
+# Use with: python 06_train_grpo.py --config configs/models/<model>.yaml --algo_config configs/algorithms/grpo.yaml
+
+# Core GRPO hyperparameters
+learning_rate: 1.5e-5
+batch_size: 8
+gradient_accumulation_steps: 8
+
+# Group-based optimization
+group_size: 4                # Number of samples per prompt to compare
+num_groups_per_batch: 2      # Number of groups in each batch
+
+# Loss computation
+use_batch_bonus: true        # Apply batch-level reward bonus
+group_baseline: "mean"       # Baseline: "mean" or "median" of group rewards
+
+# Generation parameters
+max_new_tokens: 256
+temperature: 0.7
+top_p: 0.9
+do_sample: true
+
+# Training schedule
+total_epochs: 100
+save_freq: 10                # Save checkpoint every N epochs
+eval_freq: 5                 # Evaluate every N epochs
+
+# Reward normalization
+normalize_reward: true
+reward_clip: 10.0
+
+# Stability
+clip_grad_norm: 1.0          # Gradient clipping for stability

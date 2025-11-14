@@ -73,8 +73,8 @@ class SFTConfig:
     
     # Paths
     data_dir: str = "datasets/finqa_processed"
-    output_dir: str = "outputs/finqa_rl/run_001/03_sft"
-    reward_spec: str = "outputs/finqa_rl/02_rewards/reward_spec.yaml"
+    output_dir: str = "outputs/run_001/03_sft"
+    reward_spec: str = "outputs/run_001/02_rewards/reward_spec.yaml"
     
     # Other
     seed: int = 42
@@ -308,7 +308,7 @@ def main():
     # Training arguments
     parser.add_argument("--data_dir", type=str, default="datasets/finqa_processed",
                        help="Directory with preprocessed data")
-    parser.add_argument("--output_dir", type=str, default="outputs/finqa_rl/run_001/03_sft",
+    parser.add_argument("--output_dir", type=str, default="outputs/run_001/03_sft",
                        help="Output directory")
     parser.add_argument("--epochs", type=int, default=3,
                        help="Number of training epochs")
