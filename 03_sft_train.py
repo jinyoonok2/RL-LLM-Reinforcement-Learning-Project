@@ -7,8 +7,8 @@ This module performs standard supervised learning to teach the model basic skill
 before RL training. Uses cross-entropy loss for training and reward function for monitoring.
 
 Usage:
-    python 03_sft_train.py --data_dir datasets/finqa_processed --base_model microsoft/DialoGPT-medium
-    python 03_sft_train.py --data_dir datasets/finqa_processed --base_model microsoft/DialoGPT-medium --use_lora
+    python 03_sft_train.py --data_dir datasets/finqa_processed --base_model meta-llama/Meta-Llama-3-8B-Instruct
+    python 03_sft_train.py --data_dir datasets/finqa_processed --base_model meta-llama/Meta-Llama-3-8B-Instruct --use_lora
     python 03_sft_train.py --data_dir datasets/finqa_processed --epochs 3 --batch_size 8 --lr 2e-5
 """
 
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 class SFTConfig:
     """Configuration for SFT training."""
     # Model settings
-    base_model: str = "microsoft/DialoGPT-medium"
+    base_model: str = "meta-llama/Meta-Llama-3-8B-Instruct"
     use_lora: bool = True
     lora_r: int = 8
     lora_alpha: int = 16
@@ -296,7 +296,7 @@ def main():
                        help="Path to YAML config file (overrides other arguments)")
     
     # Model arguments
-    parser.add_argument("--base_model", type=str, default="microsoft/DialoGPT-medium",
+    parser.add_argument("--base_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct",
                        help="Base model to fine-tune")
     parser.add_argument("--use_lora", action="store_true",
                        help="Use LoRA for efficient fine-tuning")

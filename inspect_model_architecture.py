@@ -9,7 +9,7 @@ This script:
 3. Generates YAML config files for training
 
 Usage:
-    python inspect_model_architecture.py --model microsoft/DialoGPT-medium
+    python inspect_model_architecture.py --model meta-llama/Meta-Llama-3-8B-Instruct
     python inspect_model_architecture.py --model meta-llama/Llama-3-8B-Instruct
     python inspect_model_architecture.py --all  # Generate configs for all default models
 """
@@ -258,7 +258,7 @@ def print_model_summary(model_info: Dict):
 def main():
     parser = argparse.ArgumentParser(description="Inspect model architecture and generate configs")
     parser.add_argument("--model", type=str, 
-                       help="Model name to inspect (e.g., microsoft/DialoGPT-medium)")
+                       help="Model name to inspect (e.g., meta-llama/Meta-Llama-3-8B-Instruct)")
     parser.add_argument("--all", action="store_true",
                        help="Generate configs for all default models")
     parser.add_argument("--output_dir", type=str, default="configs/models",
@@ -270,9 +270,9 @@ def main():
     
     # Default models to inspect if --all is specified
     default_models = [
+        "meta-llama/Meta-Llama-3-8B-Instruct",
+        "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
         "microsoft/DialoGPT-medium",
-        # Add Llama when you want to test it
-        # "meta-llama/Llama-3-8B-Instruct",
     ]
     
     if args.all:

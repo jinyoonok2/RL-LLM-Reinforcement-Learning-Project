@@ -38,7 +38,7 @@ def format_context(example: Dict) -> str:
     return "\n".join(parts)
 
 
-def prepare_finqa_dataset(input_dir: str, output_dir: str, model_name: str = "microsoft/DialoGPT-medium"):
+def prepare_finqa_dataset(input_dir: str, output_dir: str, model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"):
     """
     Prepare FinQA dataset for training.
     
@@ -135,8 +135,8 @@ def main():
                        help="Input directory with raw FinQA data")
     parser.add_argument("--output_dir", type=str, default="datasets/finqa_processed",
                        help="Output directory for processed data")
-    parser.add_argument("--model_name", type=str, default="microsoft/DialoGPT-medium",
-                       help="Model name (for future use)")
+    parser.add_argument("--model_name", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct",
+                       help="Model name for tokenizer")
     args = parser.parse_args()
     
     prepare_finqa_dataset(args.input_dir, args.output_dir, args.model_name)
