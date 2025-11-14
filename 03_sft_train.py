@@ -181,9 +181,15 @@ class FinQADataset(Dataset):
     def __getitem__(self, idx):
         example = self.examples[idx]
         
-        # Format: input_text -> target_text
+        # Format: input_text -> target (answer + program as JSON)
         input_text = example['input_text']
-        target_text = example['target_text']
+        
+        # Create target as JSON string
+        target_json = {
+            'answer': example['target_answer'],
+            'program': example.get('target_program', [])
+        }
+        target_text = json.dumps(target_json)
         
         # Combine for causal LM training
         full_text = f"{input_text} {target_text}"
