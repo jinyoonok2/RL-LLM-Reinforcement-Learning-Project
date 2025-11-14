@@ -162,12 +162,13 @@ class FinQADataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         
-        # Load preprocessed data
+        # Load preprocessed data (JSONL format)
         logger.info(f"Loading data from {data_file}")
+        self.examples = []
         with open(data_file, 'r') as f:
-            data = json.load(f)
+            for line in f:
+                self.examples.append(json.loads(line))
         
-        self.examples = data['examples']
         logger.info(f"Loaded {len(self.examples)} examples")
         
         # Add special tokens if not present
