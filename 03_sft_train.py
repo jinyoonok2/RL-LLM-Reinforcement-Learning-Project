@@ -305,11 +305,11 @@ def main():
     # Model arguments
     parser.add_argument("--base_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct",
                        help="Base model to fine-tune")
-    parser.add_argument("--use_lora", action="store_true",
-                       help="Use LoRA for efficient fine-tuning")
-    parser.add_argument("--lora_r", type=int, default=8,
+    parser.add_argument("--no_lora", action="store_true",
+                       help="Disable LoRA (full fine-tuning - requires more VRAM)")
+    parser.add_argument("--lora_r", type=int, default=32,
                        help="LoRA rank")
-    parser.add_argument("--lora_alpha", type=int, default=16,
+    parser.add_argument("--lora_alpha", type=int, default=64,
                        help="LoRA alpha")
     
     # Training arguments
@@ -319,7 +319,7 @@ def main():
                        help="Output directory")
     parser.add_argument("--epochs", type=int, default=3,
                        help="Number of training epochs")
-    parser.add_argument("--batch_size", type=int, default=4,
+    parser.add_argument("--batch_size", type=int, default=1,
                        help="Batch size")
     parser.add_argument("--lr", type=float, default=2e-5,
                        help="Learning rate")
