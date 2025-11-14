@@ -49,13 +49,13 @@ class SFTConfig:
     # Model settings
     base_model: str = "meta-llama/Meta-Llama-3-8B-Instruct"
     use_lora: bool = True
-    lora_r: int = 8
-    lora_alpha: int = 16
+    lora_r: int = 32
+    lora_alpha: int = 64
     lora_dropout: float = 0.05
     
     # Training settings
     epochs: int = 3
-    batch_size: int = 4
+    batch_size: int = 1
     learning_rate: float = 2e-5
     warmup_steps: int = 100
     max_length: int = 512
