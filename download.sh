@@ -20,9 +20,9 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Default settings
 DOWNLOAD_DATASET=true
 DOWNLOAD_MODEL=true
-MODEL_NAME="microsoft/DialoGPT-medium"  # Small model for testing
-FULL_MODEL="meta-llama/Meta-Llama-3-8B-Instruct"  # Full research model
-USE_FULL_MODEL=false
+MODEL_NAME="meta-llama/Meta-Llama-3-8B-Instruct"  # Default: Full research model
+TEST_MODEL="microsoft/DialoGPT-medium"  # Small model for testing
+USE_TEST_MODEL=false
 OUTPUT_DIR="datasets/finqa"
 MODEL_DIR="models"
 HF_TOKEN=""
@@ -36,7 +36,7 @@ show_help() {
     echo "Options:"
     echo "  --dataset-only       Download only FinQA dataset"
     echo "  --model-only         Download only the model"
-    echo "  --full-model         Download Llama-3-8B (~15GB) instead of test model"
+    echo "  --test-model         Download DialoGPT-medium (~863MB) for quick testing"
     echo "  --model NAME         Specify custom model name"
     echo "  --token TOKEN        HuggingFace authentication token"
     echo "  --output-dir DIR     Dataset output directory (default: datasets/finqa)"
@@ -45,15 +45,15 @@ show_help() {
     echo "  --help               Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                                    # Download dataset + small test model"
-    echo "  $0 --full-model                      # Download dataset + full research model"
+    echo "  $0                                    # Download dataset + Llama-3-8B (default)"
+    echo "  $0 --test-model                      # Download dataset + DialoGPT (for testing)"
     echo "  $0 --dataset-only                    # Only download FinQA dataset"
     echo "  $0 --model-only --model mistralai/Mistral-7B-Instruct-v0.1"
     echo "  $0 --force                           # Re-download everything even if exists"
     echo ""
     echo "Popular Models:"
-    echo "  microsoft/DialoGPT-medium             # Small test model (~500MB)"
-    echo "  meta-llama/Meta-Llama-3-8B-Instruct  # Full research model (~15GB)"
+    echo "  meta-llama/Meta-Llama-3-8B-Instruct  # Default: Full research model (~15GB)"
+    echo "  microsoft/DialoGPT-medium             # Small test model (~863MB)"
     echo "  mistralai/Mistral-7B-Instruct-v0.1   # Alternative 7B model"
 }
 
@@ -68,9 +68,9 @@ while [[ $# -gt 0 ]]; do
             DOWNLOAD_DATASET=false
             shift
             ;;
-        --full-model)
-            USE_FULL_MODEL=true
-            MODEL_NAME=$FULL_MODEL
+        --test-model)
+            USE_TEST_MODEL=true
+            MODEL_NAME=$TEST_MODEL
             shift
             ;;
         --model)
@@ -291,8 +291,11 @@ except:
     
     print_status "Model not found or incomplete. Downloading model: $MODEL_NAME"
     
-    if [ "$USE_FULL_MODEL" = true ]; then
-        print_warning "Downloading full model (~15GB). This may take a while..."
+    if [ "$USE_TEST_MODEL" = true ]; then
+        print_status "Downloading test model (~863MB) for quick setup..."
+    else
+        print_warning "Downloading Llama-3-8B (~15GB). This may take a while..."
+        print_warning "Requires HuggingFace authentication. Use --token or login first."
     fi
     
     # Check for required packages
