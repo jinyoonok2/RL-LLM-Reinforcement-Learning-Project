@@ -291,11 +291,27 @@ except:
     
     print_status "Model not found or incomplete. Downloading model: $MODEL_NAME"
     
-    if [ "$USE_TEST_MODEL" = true ]; then
-        print_status "Downloading test model (~863MB) for quick setup..."
-    else
+    # Check authentication for gated models (Llama)
+    if [ "$USE_TEST_MODEL" = false ]; then
         print_warning "Downloading Llama-3-8B (~15GB). This may take a while..."
-        print_warning "Requires HuggingFace authentication. Use --token or login first."
+        print_warning "This model requires HuggingFace authentication."
+        
+        # Check if user is logged in
+        if ! python -c "from huggingface_hub import HfFolder; token = HfFolder.get_token(); exit(0 if token else 1)" 2>/dev/null; then
+            print_error "❌ Not logged in to HuggingFace!"
+            print_error ""
+            print_error "Please authenticate first:"
+            print_error "  1. Run: huggingface-cli login"
+            print_error "  2. Paste your token from: https://huggingface.co/settings/tokens"
+            print_error "  3. Accept Llama license at: https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct"
+            print_error ""
+            print_error "Or use test model instead: ./download.sh --test-model"
+            exit 1
+        fi
+        
+        print_success "✓ HuggingFace authentication detected"
+    else
+        print_status "Downloading test model (~863MB) for quick setup..."
     fi
     
     # Check for required packages
