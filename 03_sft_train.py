@@ -219,9 +219,9 @@ class FinQADataset(Dataset):
             'input_ids': encodings['input_ids'].squeeze(),
             'attention_mask': encodings['attention_mask'].squeeze(),
             'labels': labels.squeeze(),
-            'example_id': example['id'],
-            'question': example['question'],
-            'ground_truth': example['ground_truth_answer']
+            'example_id': example.get('id', ''),
+            'question': example.get('question', ''),
+            'ground_truth': example.get('target_answer', '')
         }
 
 
