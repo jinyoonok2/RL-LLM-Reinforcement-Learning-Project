@@ -62,8 +62,8 @@ class SFTConfig:
     gradient_accumulation_steps: int = 4
     
     # Validation settings
-    eval_steps: int = 500
-    save_steps: int = 1000
+    eval_steps: int = 1563  # ~1 epoch (6251 samples / 4 grad_accum)
+    save_steps: int = 1563  # Save at end of each epoch
     logging_steps: int = 100
     
     # Generation settings for validation

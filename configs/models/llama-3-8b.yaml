@@ -24,8 +24,8 @@ training:
   max_length: 512
   fp16: true
 validation:
-  eval_steps: 500
-  save_steps: 1000
+  eval_steps: 1563  # Validate at end of each epoch
+  save_steps: 1563  # Save at end of each epoch
   logging_steps: 100
 generation:
   max_new_tokens: 128
