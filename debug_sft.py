@@ -103,12 +103,17 @@ def main():
         print(f"   Ground truth program: {target_program}")
         
         if parsed:
-            reward = reward_calc.calculate_reward(
-                predicted_answer=str(parsed.get('answer', '')),
-                ground_truth_answer=str(target_answer),
+            reward_result = reward_calc.calculate_component_rewards(
+                prediction=str(parsed.get('answer', '')),
+                ground_truth=str(target_answer),
                 predicted_program=parsed.get('program', ''),
                 ground_truth_program=target_program
             )
+            reward = reward_result.total
+            print(f"   Exact match: {reward_result.exact_match:.4f}")
+            print(f"   Numerical close: {reward_result.numerical_close:.4f}")
+            print(f"   Program valid: {reward_result.program_valid:.4f}")
+            print(f"   Format valid: {reward_result.format_valid:.4f}")
         else:
             reward = -0.2  # Format penalty
         
