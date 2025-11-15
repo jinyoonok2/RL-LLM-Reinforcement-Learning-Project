@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+python 03_sft_train.py --config configs/models/config_microsoft_DialoGPT_medium.yaml#!/usr/bin/env python3
 """
 FinQA Reward Function Builder - Configure and test reward functions for RL.
 
