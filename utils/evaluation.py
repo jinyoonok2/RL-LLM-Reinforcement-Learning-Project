@@ -182,8 +182,11 @@ class ModelEvaluator:
                 
                 ground_truth = example['ground_truth']
                 
+                # Create prompt with JSON instruction (same as training)
+                prompt = f"{input_text}\n\nQuestion: {question}\n\nProvide your answer in JSON format with 'answer' and 'program' fields:\n"
+                
                 # Generate prediction
-                prediction = self.generate(input_text)
+                prediction = self.generate(prompt)
                 
                 # Calculate reward if reward function available
                 reward_total = 0
