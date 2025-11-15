@@ -56,7 +56,7 @@ class SFTConfig:
     # Training settings
     epochs: int = 3
     batch_size: int = 1
-    learning_rate: float = 2e-5
+    learning_rate: float = 5e-6  # Lowered from 2e-5 to prevent NaN loss
     warmup_steps: int = 100
     max_length: int = 512
     gradient_accumulation_steps: int = 4
