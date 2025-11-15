@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 class SFTConfig:
     """Configuration for SFT training."""
     # Model settings
-    base_model: str = "meta-llama/Meta-Llama-3-8B-Instruct"
+    base_model: str = "meta-llama/Llama-3.2-1B-Instruct"  # Fast 1B model for testing
     use_lora: bool = True
     lora_r: int = 32
     lora_alpha: int = 64
