@@ -1,30 +1,25 @@
 # RL-LLM Reinforcement Learning Project
 
-**RL Pipeline (Module-First Plan) — FinQA → SFT → RL → Eval**
+**RL Pipeline for LLMs — FinQA → SFT → RL → Evaluation**
 
-This project implements reinforcement learning methods for training Large Language Models (LLMs) on the **FinQA** dataset. The approach uses a **module-first** design where each component is a single Python file with clear responsibilities, inputs/outputs, and verification steps.
+This project implements and compares multiple reinforcement learning methods for training Large Language Models on the **FinQA** dataset. The codebase uses a clean, modular design where each component is a single Python file with clear inputs/outputs and responsibilities.
 
-> **Research Goal**: Compare multiple RL methods (PPO, GRPO, RLOO, DPO) for improving mathematical reasoning in financial question-answering tasks.
+> **Research Goal**: Compare RL methods (PPO, GRPO, RLOO, DPO) for improving mathematical reasoning in financial question-answering tasks.
 
 ## 📑 Table of Contents
 
 1. [Quick Start](#-quick-start)
 2. [Project Structure](#-project-structure)
-3. [Research Methodology](#-research-methodology)
-4. [Module Specifications](#-module-specifications)
-5. [Output Directory Structure](#-output-directory-structure)
-6. [Model Configuration](#-model-configuration)
-7. [Module Dependencies](#-module-dependencies)
-8. [Development Workflow](#-development-workflow)
-9. [Troubleshooting](#-troubleshooting)
-10. [Contributing](#-contributing)
+3. [Module Specifications](#-module-specifications)
+4. [Model Configuration](#-model-configuration)
+5. [Troubleshooting](#-troubleshooting)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+ 
+- Python 3.8+
+- CUDA-capable GPU with 24GB+ VRAM (for 8B models)
 - Linux/WSL environment
-- CUDA-capable GPU (recommended)
 
 ### Setup Instructions
 
@@ -37,276 +32,309 @@ This project implements reinforcement learning methods for training Large Langua
    ./setup.sh
    ```
 
-2. **Activate Environment** (for daily development):
+2. **Activate Environment**:
    ```bash
    source activate.sh           # Use 'source' to stay in the environment
    # You should see (venv) in your prompt
    ```
 
-3. **Configure Settings**:
+3. **Download Data & Models**:
    ```bash
-   cp .env.template .env
-   # Edit .env with your HuggingFace tokens, WANDB settings, etc.
+   # Default: FinQA dataset + Llama-3.2-1B model (~2.5GB, fast testing)
+   bash download.sh
+   
+   # For production 8B model:
+   bash download.sh --model meta-llama/Meta-Llama-3-8B-Instruct
    ```
 
-4. **Download Data & Models**:
+4. **Run the Pipeline**:
    ```bash
-   ./download.sh                # Dataset + DialoGPT-medium (863MB, for testing)
-   ./download.sh --full-model   # Dataset + Llama-3-8B (15GB, for research)
+   # Step 1: Check data
+   python 00_check_data.py
+   
+   # Step 2: Prepare dataset
+   python 01_prepare_dataset.py
+   
+   # Step 3: Build rewards
+   python 02_build_rewards.py
+   
+   # Step 4: SFT training (uses Llama-3.2-1B by default)
+   python 03_sft_train.py
+   
+   # Step 5: Generate candidates
+   python 04_generate_candidates.py --policy_ckpt outputs/run_001/03_sft
+   
+   # For 8B model training:
+   python 03_sft_train.py --config configs/models/llama-3-8b.yaml
    ```
 
-5. **Test Installation**:
-   ```bash
-   python test_setup.py
-   ```
+### Model Selection
 
-### Script Options
-- **`./setup.sh --restart`**: Remove existing environment and recreate from scratch
-- **`./setup.sh --help`**: Show help message
-- **`./activate.sh`**: Simple activation (use this for daily development)
+**Default (Fast Testing)**: Llama-3.2-1B (~2.5GB)
+- Training: ~8x faster than 8B model
+- Memory: Fits on 8GB+ GPU
+- Quality: Good for iteration and debugging
 
-**Note**: `setup.sh` only handles Python virtual environment and package installation. 
-Make sure you have basic development tools installed on your system:
-```bash
-# Ubuntu/Debian/WSL:
-sudo apt install python3 python3-venv python3-pip build-essential git
-```
-
-**Dataset Download**: The FinQA dataset is downloaded directly from the official GitHub repository using git clone for reliability.
+**Production**: Llama-3-8B (~15GB)
+- Training: Better final performance
+- Memory: Requires 24GB+ GPU with LoRA
+- Use: `--config configs/models/llama-3-8b.yaml`
 
 ## 📁 Project Structure
 
 ```
-├── README.md                      # This comprehensive documentation
-├── requirements.txt               # All Python dependencies (core + dev)
-├── setup.sh                       # Create venv & install dependencies
-├── activate.sh                    # Simple environment activation
-├── .env.template                  # Environment variables template
-├── .gitignore                     # Git ignore patterns
+├── README.md                      # This documentation
+├── requirements.txt               # Python dependencies
+├── setup.sh                       # Environment setup
+├── activate.sh                    # Environment activation
+├── download.sh                    # Data & model download
 │
-├── configs/                       # Configuration files
-│   ├── schema.json                # FinQA output schema (defines expected JSON format)
-│   ├── models/                    # Model-specific configs (architecture + training)
-│   │   ├── config_microsoft_DialoGPT_medium.yaml
-│   │   ├── config_TinyLlama_1.1B_Chat.yaml
-│   │   └── config_meta_llama_Llama_3_8B_Instruct.yaml
-│   └── algorithms/                # RL algorithm hyperparameters
-│       ├── ppo.yaml               # PPO-specific settings
-│       ├── grpo.yaml              # GRPO-specific settings
-│       ├── rloo.yaml              # RLOO-specific settings
-│       └── dpo.yaml               # DPO-specific settings
+├── configs/
+│   ├── models/                    # Model configurations
+│   │   ├── llama-3.2-1b.yaml      # Default: 1B fast model
+│   │   └── llama-3-8b.yaml        # Production: 8B model
+│   └── algorithms/                # RL algorithm configs
+│       ├── ppo.yaml
+│       ├── grpo.yaml
+│       ├── rloo.yaml
+│       └── dpo.yaml
 │
-├── 00_check_data.py               # Data validation
-├── 01_prepare_dataset.py          # Dataset preparation
-├── 02_build_rewards.py            # Reward function implementation
-├── 03_sft_train.py                # Supervised fine-tuning
-├── 04_sample_candidates.py        # Candidate generation (TBD)
-├── 05_train_ppo.py                # PPO training (TBD)
-├── 06_train_grpo.py               # GRPO training (TBD)
-├── 07_train_rloo.py               # RLOO training (TBD)
-├── 08_build_prefs.py              # Preference pair construction (TBD)
-├── 09_train_dpo.py                # DPO training (TBD)
-├── 10_evaluate.py                 # Evaluation framework (TBD)
-├── 11_compare_runs.py             # Results comparison (TBD)
-├── 12_driver.py                   # Full pipeline orchestration (TBD)
-├── inspect_model_architecture.py  # Model architecture inspection tool
+├── 00_check_data.py               # ✅ Data validation
+├── 01_prepare_dataset.py          # ✅ Dataset preparation  
+├── 02_build_rewards.py            # ✅ Reward function implementation
+├── 03_sft_train.py                # ✅ Supervised fine-tuning
+├── 04_generate_candidates.py      # ✅ Candidate generation for RL
+├── 05_train_ppo.py                # 🚧 PPO training (in progress)
+├── 06_train_grpo.py               # 🚧 GRPO training (planned)
+├── 07_train_rloo.py               # 🚧 RLOO training (planned)
+├── 08_build_prefs.py              # 🚧 Preference construction (planned)
+├── 09_train_dpo.py                # 🚧 DPO training (planned)
+├── 10_evaluate.py                 # 🚧 Evaluation (planned)
+├── 11_compare_runs.py             # 🚧 Results comparison (planned)
 │
 ├── utils/                         # Shared utilities
-│   ├── evaluation.py              # ModelEvaluator for validation/testing
-│   └── trainer.py                 # SFTTrainer for training loops
+│   ├── rewards.py                 # FinQA reward calculator
+│   └── common.py                  # Logging, manifest writing
 │
-├── datasets/finqa/                # FinQA dataset files
-├── outputs/                       # Experiment outputs (see Output Structure section)
-│   ├── run_001/                   # First experimental run
-│   ├── run_002/                   # Second experimental run
-│   └── ...
-├── tests/                         # Unit tests
-├── notebooks/                     # Jupyter notebooks for analysis
-├── download.sh                    # Reliable download script (git clone + HF models)
-└── test_setup.py                  # Setup validation script
+├── datasets/finqa/                # Original FinQA data
+├── datasets/finqa_processed/      # Preprocessed JSONL files
+└── outputs/                       # Experiment outputs
+    └── run_001/                   # First experimental run
+        ├── 02_rewards/            # Reward spec
+        ├── 03_sft/                # SFT checkpoints
+        └── 04_candidates/         # Generated candidates
 ```
 
 ## 🔬 Research Methodology
 
 ### Global Conventions
 
-- **Dataset**: `datasets/finqa/` (original FinQA JSON files)
-- **Preprocessed data**: `datasets/finqa_processed/` (prepared for training)
-- **Dataset**: `datasets/finqa/` (original FinQA JSON files)
-- **Preprocessed data**: `datasets/finqa_processed/` (prepared for training)
-- **Experiment root**: `outputs/`
-- **Run naming**: `run_001/`, `run_002/`, … (each full SFT+RL+Eval cycle)
-- **Module outputs**: `outputs/run_XXX/YY_module_name/` (unified structure)
-  - Example: `outputs/run_001/02_rewards/`, `outputs/run_001/03_sft/`
-- **Seeds & determinism**: every module accepts `--seed`; all produced artifacts include seed/version info
-- **JSON manifest**: every module writes `manifest.json` with params, seeds, git commit/hash, and version strings
-- **Configs**: Two-tier system:
-  - **Model configs** (`configs/models/*.yaml`): Architecture, LoRA, training params, paths
-  - **Algorithm configs** (`configs/algorithms/*.yaml`): RL method hyperparameters only
-  - Both optional; modules also accept CLI flags
-- **Schema contract**: prompts and outputs follow a fixed **JSON schema** (`configs/schema.json`) for evaluation consistency
+- **Dataset**: `datasets/finqa/` (original JSON)
+- **Preprocessed**: `datasets/finqa_processed/` (JSONL format)
+- **Outputs**: `outputs/run_XXX/YY_module/` structure
+- **Models**: Default 1B for testing, 8B for production
+- **Configs**: Model-specific YAML files in `configs/models/`
+- **Determinism**: All modules accept `--seed` parameter
+- **Manifests**: Each module writes `manifest.json` with parameters
 
 ### Pipeline Overview
 
-The research pipeline consists of 12 modules that can be run independently or orchestrated together:
+1. **Data Processing** (00-01): Validate and prepare FinQA dataset
+2. **Reward Setup** (02): Define reward functions for RL training
+3. **SFT Training** (03): Supervised fine-tuning base policy
+4. **Candidate Generation** (04): Sample multiple responses per prompt
+5. **RL Training** (05-09): Train with PPO/GRPO/RLOO/DPO methods
+6. **Evaluation** (10-11): Compare and analyze results
 
 ## 📋 Module Specifications
 
-### 00_check_data.py — Validate FinQA Inputs
+### 00_check_data.py — Data Validation ✅
 
-**Goal**: Confirm FinQA is present and parsable; summarize splits and fields.
+Validates FinQA dataset integrity and structure.
 
-**Inputs**
-- `--data_root datasets/finqa/`
+```bash
+python 00_check_data.py
+```
 
-**Saves (in `outputs/run_001/00_data_validation/`)**
-- `summary.txt`: sample counts (train/val/test), missing fields, basic stats on answer types
-- `examples/` (5–10 pretty-printed examples): `train_000.json`, `val_000.json`
-- `manifest.json`: paths, timestamp, seed
-
-**Verify**
-- `summary.txt` shows expected split sizes (~8k total samples)
-- Examples contain question, context reference(s), answer, and (if available) program steps
-- Any malformed record count is reported (and < 1% of data)
+**Outputs**: `outputs/run_001/00_data_validation/`
+- Dataset statistics summary
+- Sample examples
+- Manifest with validation results
 
 ---
 
-### 01_prepare_dataset.py — Standardize Prompt/Output Items
+### 01_prepare_dataset.py — Dataset Preparation ✅
 
-**Goal**: Produce a normalized **prompt → expected JSON output** dataset the model will use for SFT and evaluation.
+Converts FinQA to JSONL format with unified prompt/target structure.
 
-**Inputs**
-- `--data_root datasets/finqa/`
-- `--schema configs/schema.json` (defines required JSON fields; e.g., `{ "answer": <str/num>, "program": [ ... ] }`)
-- `--split_proportions 0.8 0.1 0.1` (or use provided FinQA splits)
+```bash
+python 01_prepare_dataset.py
+```
 
-**Saves (in `outputs/finqa_rl/01_prepared/`)**
-- `train.jsonl`, `val.jsonl`, `test.jsonl` (one example per line; fields: `id`, `prompt`, `target_json`)
-- `schema_used.json`
-- `manifest.json`
-
-**Verify**
-- Head/tail preview shows clean, self-contained prompts (no leakage of labels)
-- Random 20-sample validation: `target_json` parses and matches schema
-- Counts align with `00_data_check/summary.txt`
+**Outputs**: `datasets/finqa_processed/`
+- `train.jsonl`, `val.jsonl`, `test.jsonl`
+- Fields: `id`, `input_text`, `target_answer`, `target_program`, `question`
 
 ---
 
-### 02_build_rewards.py — Programmatic Reward Functions
+### 02_build_rewards.py — Reward Functions ✅
 
-**Goal**: Implement scoring functions the RL methods will call.
+Implements FinQA reward calculator (answer + program correctness).
 
-**Inputs**
-- `--schema configs/schema.json`
-- `--weights "exact=1.0,program=0.3,format=0.2"` (example; keep weights configurable)
+```bash
+python 02_build_rewards.py
+```
 
-**Saves (in `outputs/finqa_rl/02_rewards/`)**
-- `reward_spec.yaml`: exact-match, numeric tolerance, program execution validity rules, JSON format compliance
-- `unit_tests/` (gold cases): input/output pairs with expected reward components
-- `manifest.json`
+**Outputs**: `outputs/run_001/02_rewards/`
+- `reward_spec.yaml`: Reward configuration
+- Test results showing reward components
 
-**Verify**
-- Run built-in unit tests: each test prints component scores and total reward
-- JSON format violations yield non-crashing, zeroed (or penalized) rewards
-- Numeric tolerance logic behaves as intended on provided corner cases
-
----
-
-### 03_sft_train.py — Supervised Fine-Tuning (Base Policy)
-
-**Goal**: Fine-tune a base LLM to emit **valid JSON** in the required schema.
-
-**Inputs**
-- `--train_jsonl outputs/finqa_rl/01_prepared/train.jsonl`
-- `--val_jsonl outputs/finqa_rl/01_prepared/val.jsonl`
-- `--base_model <hf_model_or_path>` (e.g., `meta-llama/Meta-Llama-3-8B-Instruct` or your local model)
-- `--epochs 1-3`, `--lr`, `--batch_size`, `--max_len`, `--seed`
-
-**Saves (in `outputs/finqa_rl/run_001/03_sft/`)**
-- `ckpt_sft/` (tokenizer + model checkpoint or LoRA adapters)
-- `logs/` (loss curves, validation metrics)
-- `valid_samples/` (N model generations with parse status and schema diff)
-- `manifest.json`
-
-**Verify**
-- At least 90% of `valid_samples` parse as JSON without errors
-- Validation loss decreases; simple exact-match and format metrics improve over training
-- Spot-check generations: structure matches schema; fields present and typed correctly
+**Reward Components**:
+- Exact match bonus: +1.0
+- Numeric match (5% tolerance): +0.8  
+- Partial program match: +0.3
+- Format penalty: -0.2
 
 ---
 
-### 04_sample_candidates.py — Candidate Generation (for GRPO/RLOO/DPO)
+### 03_sft_train.py — Supervised Fine-Tuning ✅
 
-**Goal**: Generate **K** candidate answers per prompt from the SFT (or current) policy for downstream RL or preference building.
+Fine-tunes LLM to generate JSON responses with LoRA.
 
-**Inputs**
-- `--policy_ckpt outputs/finqa_rl/run_001/03_sft/ckpt_sft/`
-- `--split val` (or a subset list of IDs)
-- `--num_candidates K` (e.g., 4–8), `--temperature`, `--top_p`, `--seed`
+```bash
+# Default: Llama-3.2-1B
+python 03_sft_train.py
 
-**Saves (in `outputs/finqa_rl/run_001/04_candidates/`)**
-- `candidates.jsonl` (fields: `id`, `prompt`, `cands`: [ {`text`, `parsed_json`, `parse_ok`} x K ])
-- `scores.jsonl` (optional: preliminary reward components per candidate via 02's reward functions)
-- `manifest.json`
+# Production: Llama-3-8B
+python 03_sft_train.py --config configs/models/llama-3-8b.yaml
+```
 
-**Verify**
-- Parse rate per candidate > 70% on SFT; invalid parses flagged but kept for analysis
-- Score histogram is non-degenerate (variation across candidates)
-- K is respected for all prompts (or failures recorded)
+**Key Features**:
+- LoRA training (0.34% trainable params)
+- Batch size 1 + gradient accumulation 4
+- Learning rate: 5e-6 (stable for LoRA)
+- Validation every 500 steps
 
----
-
-### 05_train_ppo.py — RL: Proximal Policy Optimization
-
-**Goal**: Optimize policy with **clipped PPO** and **KL anchoring** to a reference (SFT).
-
-**Inputs**
-- `--policy_ckpt outputs/finqa_rl/run_001/03_sft/ckpt_sft/`
-- `--reward_spec outputs/finqa_rl/02_rewards/reward_spec.yaml`
-- `--train_jsonl outputs/finqa_rl/01_prepared/train.jsonl`
-- PPO hyperparams: `--kl_coef`, `--clip_range`, `--rollout_batch`, `--mini_epochs`, `--seed`
-
-**Saves (in `outputs/finqa_rl/run_001/05_ppo/`)**
-- `ckpt_ppo/` (policy after RL)
-- `logs/` (reward components, KL, clip frac, value stats if using critic)
-- `val_generations/` (periodic eval generations with reward breakdown)
-- `manifest.json`
-
-**Verify**
-- Mean total reward rises; KL stays within target band
-- Format violation rate drops vs SFT
-- Exact-match improves on a held-out val subset without mode collapse
+**Outputs**: `outputs/run_001/03_sft/`
+- `ckpt_sft/`: Model checkpoints
+- `valid_samples/`: Generated samples with rewards
+- Training logs with loss curves
 
 ---
 
-### 06_train_grpo.py — RL: Group Relative Policy Optimization
+### 04_generate_candidates.py — Candidate Generation ✅
 
-**Goal**: **Critic-free** policy optimization by comparing groups of sampled outputs and pushing toward above-average samples.
+Generates K diverse candidate responses for RL training.
 
-**Inputs**
-- `--policy_ckpt` (start from SFT or PPO)
-- `--reward_spec` (same as 05)
-- `--group_size G` (e.g., 4–8), `--batch_bonus on|off`, `--seed`
-- Optionally reuse `04_candidates/candidates.jsonl` to warm-start
+```bash
+python 04_generate_candidates.py --policy_ckpt outputs/run_001/03_sft
+```
 
-**Saves (in `outputs/finqa_rl/run_001/06_grpo/`)**
-- `ckpt_grpo/`
-- `logs/` (group mean vs winners, variance across seeds)
-- `val_generations/`
-- `manifest.json`
+**Parameters**:
+- `--num_candidates`: Number of samples per prompt (default: 4)
+- `--temperature`: Sampling temperature (default: 0.8)
+- `--top_p`: Nucleus sampling (default: 0.9)
 
-**Verify**
-- Group winners' rewards consistently exceed group means
-- With/without batch bonus ablation shows predictable differences
-- Stability across seeds improves relative to PPO (variance narrows)
+**Outputs**: `outputs/run_001/04_candidates/`
+- `candidates.jsonl`: K responses per prompt
+- `scores.jsonl`: Reward scores for each candidate
 
 ---
 
-### 07_train_rloo.py — RL: REINFORCE Leave-One-Out
+### 05_train_ppo.py — PPO Training 🚧
 
-**Goal**: **Variance-reduced** critic-free updates using a leave-one-out baseline per candidate.
+**Status**: In progress
 
-**Inputs**
+Proximal Policy Optimization with KL penalty.
+
+```bash
+python 05_train_ppo.py --policy_ckpt outputs/run_001/03_sft
+```
+
+---
+
+### 06-09: Additional RL Methods 🚧
+
+**Status**: Planned
+
+- **06_train_grpo.py**: Group Relative Policy Optimization
+- **07_train_rloo.py**: REINFORCE Leave-One-Out
+- **08_build_prefs.py**: Preference pair construction
+- **09_train_dpo.py**: Direct Preference Optimization
+
+---
+
+### 10-11: Evaluation 🚧
+
+**Status**: Planned
+
+- **10_evaluate.py**: Unified evaluation framework
+- **11_compare_runs.py**: Cross-method comparison
+
+## 🔧 Model Configuration
+
+### Available Models
+
+1. **Llama-3.2-1B-Instruct** (Default)
+   - Size: ~2.5GB
+   - VRAM: ~4-6GB with LoRA
+   - Speed: ~8x faster than 8B
+   - Config: `configs/models/llama-3.2-1b.yaml`
+
+2. **Meta-Llama-3-8B-Instruct** (Production)
+   - Size: ~15GB  
+   - VRAM: ~18-20GB with LoRA
+   - Quality: Better performance
+   - Config: `configs/models/llama-3-8b.yaml`
+
+### Training Configuration
+
+Both configs include:
+- **LoRA**: r=32, alpha=64, dropout=0.05
+- **Batch**: size=1, gradient_accumulation=4
+- **Learning rate**: 5e-6 (stable for LoRA)
+- **Epochs**: 3
+- **FP16**: Enabled
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**1. CUDA Out of Memory**
+- Use 1B model: `python 03_sft_train.py` (default)
+- Or reduce batch size in config
+
+**2. Model Download Fails**
+```bash
+# Authenticate with HuggingFace
+huggingface-cli login
+
+# Accept Llama license at:
+# https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct
+```
+
+**3. Training Loss is NaN**
+- Already fixed with learning_rate=5e-6
+- If still occurs, lower to 1e-6
+
+**4. Parse Rate Low (<50%)**
+- SFT needs more epochs or better prompt format
+- Check validation samples in `outputs/run_001/03_sft/valid_samples/`
+
+**5. Zero Rewards**
+- Verify reward function: `python 02_build_rewards.py`
+- Check JSON format in generated samples
+
+### Getting Help
+
+- Check module outputs in `outputs/run_001/`
+- Review `manifest.json` files for configuration
+- Examine validation samples for model behavior
+
+---
+
+**Last Updated**: November 2025  
+**Status**: Modules 00-04 complete, 05-11 in development
 - `--policy_ckpt`
 - `--reward_spec`
 - `--num_samples K` (per prompt), `--seed`
