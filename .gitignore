@@ -35,8 +35,9 @@ venv.bak/
 *.bin
 *.safetensors
 checkpoints/
-models/
+/models/  # Ignore models/ at root only
 !configs/models/  # Allow model config files
+!configs/models/*.yaml  # Explicitly allow YAML configs
 
 # Jupyter Notebook
 .ipynb_checkpoints
