@@ -304,11 +304,11 @@ def main():
     parser = argparse.ArgumentParser(description="Supervised Fine-Tuning for FinQA")
     
     # Config file argument
-    parser.add_argument("--config", type=str,
-                       help="Path to YAML config file (overrides other arguments)")
+    parser.add_argument("--config", type=str, default="configs/models/llama-3.2-1b.yaml",
+                       help="Path to YAML config file (default: 1B model, use configs/models/llama-3-8b.yaml for 8B)")
     
     # Model arguments
-    parser.add_argument("--base_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct",
+    parser.add_argument("--base_model", type=str, default="meta-llama/Llama-3.2-1B-Instruct",
                        help="Base model to fine-tune")
     parser.add_argument("--no_lora", action="store_true",
                        help="Disable LoRA (full fine-tuning - requires more VRAM)")
