@@ -183,6 +183,7 @@ class FinQADataset(Dataset):
         
         # Format: input_text -> target (answer + program as JSON)
         input_text = example['input_text']
+        question = example.get('question', '')
         
         # Create target as JSON string
         target_json = {
@@ -191,8 +192,11 @@ class FinQADataset(Dataset):
         }
         target_text = json.dumps(target_json)
         
+        # Create proper instruction format
+        prompt = f"{input_text}\n\nQuestion: {question}\n\nProvide your answer in JSON format with 'answer' and 'program' fields:\n"
+        
         # Combine for causal LM training
-        full_text = f"{input_text} {target_text}"
+        full_text = f"{prompt}{target_text}"
         
         # Tokenize
         encodings = self.tokenizer(
@@ -204,8 +208,9 @@ class FinQADataset(Dataset):
         )
         
         # Create labels (mask input part, only compute loss on target)
+        prompt_text = f"{input_text}\n\nQuestion: {question}\n\nProvide your answer in JSON format with 'answer' and 'program' fields:\n"
         input_encodings = self.tokenizer(
-            input_text,
+            prompt_text,
             truncation=True,
             max_length=self.max_length,
             return_tensors='pt'
