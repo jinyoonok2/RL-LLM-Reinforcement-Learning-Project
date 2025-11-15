@@ -20,9 +20,7 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Default settings
 DOWNLOAD_DATASET=true
 DOWNLOAD_MODEL=true
-MODEL_NAME="meta-llama/Meta-Llama-3-8B-Instruct"  # Default: Full research model
-TEST_MODEL="meta-llama/Llama-3.2-1B-Instruct"  # Fast 1B model for testing (~2.5GB)
-USE_TEST_MODEL=false
+MODEL_NAME="meta-llama/Llama-3.2-1B-Instruct"  # Default: Fast 1B model for testing
 OUTPUT_DIR="datasets/finqa"
 MODEL_DIR="models"
 HF_TOKEN=""
@@ -36,8 +34,7 @@ show_help() {
     echo "Options:"
     echo "  --dataset-only       Download only FinQA dataset"
     echo "  --model-only         Download only the model"
-    echo "  --test-model         Download Llama-3.2-1B (~2.5GB) for fast testing"
-    echo "  --model NAME         Specify custom model name"
+    echo "  --model NAME         Specify model name (default: Llama-3.2-1B-Instruct)"
     echo "  --token TOKEN        HuggingFace authentication token"
     echo "  --output-dir DIR     Dataset output directory (default: datasets/finqa)"
     echo "  --model-dir DIR      Model output directory (default: models)"
@@ -45,15 +42,15 @@ show_help() {
     echo "  --help               Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                                    # Download dataset + Llama-3-8B (default)"
-    echo "  $0 --test-model                      # Download dataset + Llama-3.2-1B (fast)"
-    echo "  $0 --dataset-only                    # Only download FinQA dataset"
-    echo "  $0 --model-only --model mistralai/Mistral-7B-Instruct-v0.1"
-    echo "  $0 --force                           # Re-download everything even if exists"
+    echo "  $0                                            # Download dataset + Llama-3.2-1B (default)"
+    echo "  $0 --model meta-llama/Meta-Llama-3-8B-Instruct  # Download 8B model instead"
+    echo "  $0 --dataset-only                             # Only download FinQA dataset"
+    echo "  $0 --model-only                               # Only download default model"
+    echo "  $0 --force                                    # Re-download everything"
     echo ""
     echo "Popular Models:"
-    echo "  meta-llama/Meta-Llama-3-8B-Instruct  # Default: Full research model (~15GB)"
-    echo "  meta-llama/Llama-3.2-1B-Instruct     # Fast testing model (~2.5GB)"
+    echo "  meta-llama/Llama-3.2-1B-Instruct     # Default: Fast testing model (~2.5GB)"
+    echo "  meta-llama/Meta-Llama-3-8B-Instruct  # Production model (~15GB)"
     echo "  mistralai/Mistral-7B-Instruct-v0.1   # Alternative 7B model"
 }
 
@@ -66,11 +63,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --model-only)
             DOWNLOAD_DATASET=false
-            shift
-            ;;
-        --test-model)
-            USE_TEST_MODEL=true
-            MODEL_NAME=$TEST_MODEL
             shift
             ;;
         --model)
@@ -292,7 +284,7 @@ except:
     print_status "Model not found or incomplete. Downloading model: $MODEL_NAME"
     
     # Check authentication for gated models (Llama)
-    if [ "$USE_TEST_MODEL" = false ]; then
+    if [[ "$MODEL_NAME" == *"Meta-Llama-3-8B"* ]]; then
         print_warning "Downloading Llama-3-8B (~15GB). This may take a while..."
         print_warning "This model requires HuggingFace authentication."
         
@@ -305,13 +297,14 @@ except:
             print_error "  2. Paste your token from: https://huggingface.co/settings/tokens"
             print_error "  3. Accept Llama license at: https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct"
             print_error ""
-            print_error "Or use test model instead: ./download.sh --test-model"
             exit 1
         fi
         
         print_success "✓ HuggingFace authentication detected"
+    elif [[ "$MODEL_NAME" == *"Llama-3.2-1B"* ]]; then
+        print_status "Downloading Llama-3.2-1B (~2.5GB) - default fast testing model..."
     else
-        print_status "Downloading test model (~863MB) for quick setup..."
+        print_status "Downloading custom model: $MODEL_NAME"
     fi
     
     # Check for required packages
