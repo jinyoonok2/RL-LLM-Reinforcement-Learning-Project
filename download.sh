@@ -21,9 +21,7 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 DOWNLOAD_DATASET=true
 DOWNLOAD_MODEL=true
 MODEL_NAME="meta-llama/Meta-Llama-3-8B-Instruct"  # Default: Full research model
-FAST_MODEL="meta-llama/Llama-3.2-1B-Instruct"  # Fast 1B model for testing (~2.5GB)
-TEST_MODEL="microsoft/DialoGPT-medium"  # Smallest test model (~863MB)
-USE_FAST_MODEL=false
+TEST_MODEL="meta-llama/Llama-3.2-1B-Instruct"  # Fast 1B model for testing (~2.5GB)
 USE_TEST_MODEL=false
 OUTPUT_DIR="datasets/finqa"
 MODEL_DIR="models"
@@ -38,8 +36,7 @@ show_help() {
     echo "Options:"
     echo "  --dataset-only       Download only FinQA dataset"
     echo "  --model-only         Download only the model"
-    echo "  --fast-model         Download Llama-3.2-1B (~2.5GB) for fast testing"
-    echo "  --test-model         Download DialoGPT-medium (~863MB) for quick testing"
+    echo "  --test-model         Download Llama-3.2-1B (~2.5GB) for fast testing"
     echo "  --model NAME         Specify custom model name"
     echo "  --token TOKEN        HuggingFace authentication token"
     echo "  --output-dir DIR     Dataset output directory (default: datasets/finqa)"
@@ -49,8 +46,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  $0                                    # Download dataset + Llama-3-8B (default)"
-    echo "  $0 --fast-model                      # Download dataset + Llama-3.2-1B (fast testing)"
-    echo "  $0 --test-model                      # Download dataset + DialoGPT (smallest)"
+    echo "  $0 --test-model                      # Download dataset + Llama-3.2-1B (fast)"
     echo "  $0 --dataset-only                    # Only download FinQA dataset"
     echo "  $0 --model-only --model mistralai/Mistral-7B-Instruct-v0.1"
     echo "  $0 --force                           # Re-download everything even if exists"
@@ -58,7 +54,6 @@ show_help() {
     echo "Popular Models:"
     echo "  meta-llama/Meta-Llama-3-8B-Instruct  # Default: Full research model (~15GB)"
     echo "  meta-llama/Llama-3.2-1B-Instruct     # Fast testing model (~2.5GB)"
-    echo "  microsoft/DialoGPT-medium             # Smallest test model (~863MB)"
     echo "  mistralai/Mistral-7B-Instruct-v0.1   # Alternative 7B model"
 }
 
@@ -71,11 +66,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --model-only)
             DOWNLOAD_DATASET=false
-            shift
-            ;;
-        --fast-model)
-            USE_FAST_MODEL=true
-            MODEL_NAME=$FAST_MODEL
             shift
             ;;
         --test-model)
