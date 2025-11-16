@@ -241,8 +241,11 @@ class FinQADataset(Dataset):
         else:
             # Normal case: mask prompt, keep answer
             labels[0, :prompt_len] = -100
+            # ALSO mask padding tokens (where attention_mask is 0)
+            labels[0, full_encodings['attention_mask'][0] == 0] = -100
             if idx < 3:
-                logger.info(f"  Sample {idx}: masked {prompt_len} prompt tokens, keeping {self.max_length - prompt_len} for answer")
+                non_masked = (labels[0] != -100).sum().item()
+                logger.info(f"  Sample {idx}: masked {prompt_len} prompt tokens, {non_masked} answer tokens remain")
         
         return {
             'input_ids': full_encodings['input_ids'].squeeze(),
