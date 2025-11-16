@@ -182,3 +182,17 @@ class FinQARewardCalculator:
         }
         
         return components
+    
+    def calculate(self, prediction: str, ground_truth: str, question: str = "", **kwargs) -> RewardComponents:
+        """
+        Convenience method for compatibility with evaluation code.
+        Delegates to calculate_component_rewards().
+        """
+        return self.calculate_component_rewards(
+            prediction=prediction,
+            ground_truth=ground_truth,
+            predicted_program=kwargs.get('predicted_program'),
+            ground_truth_program=kwargs.get('ground_truth_program'),
+            weights=kwargs.get('weights')
+        )
+
