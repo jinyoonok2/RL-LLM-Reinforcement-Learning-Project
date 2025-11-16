@@ -21,7 +21,7 @@ training:
   gradient_accumulation_steps: 4
   learning_rate: 1.0e-06
   warmup_steps: 100
-  max_length: 4096  # Set high enough to include all FinQA samples (no filtering)
+  max_length: 2048  # Balance: keeps ~85-90% of data, 2x slower than 1024
   fp16: false
   bf16: true
   max_grad_norm: 1.0

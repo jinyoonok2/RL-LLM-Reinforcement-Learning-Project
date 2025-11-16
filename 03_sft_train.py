@@ -58,7 +58,7 @@ class SFTConfig:
     batch_size: int = 1
     learning_rate: float = 5e-6  # Lowered from 2e-5 to prevent NaN loss
     warmup_steps: int = 100
-    max_length: int = 4096  # High enough to include all FinQA samples without filtering
+    max_length: int = 2048  # Balance between data coverage (~85-90%) and training speed
     gradient_accumulation_steps: int = 4
     max_grad_norm: float = 1.0  # Gradient clipping to prevent exploding gradients
     
@@ -162,7 +162,7 @@ class SFTConfig:
 class FinQADataset(Dataset):
     """Dataset class for FinQA preprocessed data."""
     
-    def __init__(self, data_file: Path, tokenizer, max_length: int = 4096):
+    def __init__(self, data_file: Path, tokenizer, max_length: int = 2048):
         self.tokenizer = tokenizer
         self.max_length = max_length
         
