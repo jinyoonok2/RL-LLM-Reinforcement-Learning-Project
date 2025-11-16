@@ -202,16 +202,7 @@ class FinQADataset(Dataset):
         # Combine for causal LM training (add EOS token)
         full_text = f"{prompt}{target_text}{self.tokenizer.eos_token}"
         
-        # 1. Tokenize the prompt *without* truncation to get its true length
-        prompt_encodings = self.tokenizer(
-            prompt,
-            return_tensors='pt',
-            truncation=False,
-            padding=False
-        )
-        prompt_len = prompt_encodings['input_ids'].shape[1]
-        
-        # 2. Tokenize the full text *with* truncation and padding
+        # Tokenize the full text with truncation and padding
         full_encodings = self.tokenizer(
             full_text,
             truncation=True,
@@ -220,15 +211,25 @@ class FinQADataset(Dataset):
             return_tensors='pt'
         )
         
+        # Tokenize JUST the prompt to find where it ends (may be truncated)
+        # This tells us where to start unmasking for the answer
+        prompt_only_encodings = self.tokenizer(
+            prompt,
+            truncation=True,  # Truncate to match what happened in full_text
+            max_length=self.max_length,
+            return_tensors='pt'
+        )
+        prompt_len = prompt_only_encodings['input_ids'].shape[1]
+        
         labels = full_encodings['input_ids'].clone()
         
-        # 3. Check if the prompt itself was longer than max_length
-        if prompt_len >= self.max_length:
-            # This sample is unusable, the answer is completely truncated.
-            # Mask the whole thing so it contributes zero to the loss.
+        # Mask the prompt part, keep the answer/target part for loss calculation
+        # If prompt takes up all 512 tokens, we'd have no answer, so we need at least some space
+        if prompt_len >= self.max_length - 10:  # Reserve at least 10 tokens for answer
+            # Skip this sample - prompt too long to fit any meaningful answer
             labels[0, :] = -100
         else:
-            # Mask only the prompt part
+            # Normal case: mask prompt, keep answer
             labels[0, :prompt_len] = -100
         
         return {
