@@ -169,6 +169,7 @@ class FinQADataset(Dataset):
         # Load preprocessed data (JSONL format)
         logger.info(f"Loading data from {data_file}")
         logger.info(f"Using max_length: {max_length}")
+        logger.info(f"🔍 Dataset initialized with padding masking fix (v2)")
         self.examples = []
         with open(data_file, 'r') as f:
             for line in f:
@@ -224,12 +225,15 @@ class FinQADataset(Dataset):
         
         labels = full_encodings['input_ids'].clone()
         
-        # Debug first few samples
-        if idx < 3:
-            logger.info(f"Dataset sample {idx}:")
-            logger.info(f"  Prompt length: {prompt_len}")
+        # Debug first few samples - ALWAYS log sample 0 to verify code is running
+        if idx == 0:
+            logger.info(f"=" * 80)
+            logger.info(f"🔍 DATASET DEBUG - Sample {idx}:")
+            logger.info(f"  Prompt length: {prompt_len} tokens")
             logger.info(f"  Full text tokens: {full_encodings['input_ids'].shape[1]}")
-            logger.info(f"  Target text: {target_text[:100]}...")
+            logger.info(f"  Attention mask sum: {full_encodings['attention_mask'].sum().item()}")
+            logger.info(f"  Target text preview: {target_text[:100]}...")
+            logger.info(f"=" * 80)
         
         # Mask the prompt part, keep the answer/target part for loss calculation
         # If prompt takes up almost all tokens, we'd have no answer, so we need at least some space
@@ -243,9 +247,10 @@ class FinQADataset(Dataset):
             labels[0, :prompt_len] = -100
             # ALSO mask padding tokens (where attention_mask is 0)
             labels[0, full_encodings['attention_mask'][0] == 0] = -100
-            if idx < 3:
+            if idx == 0:
                 non_masked = (labels[0] != -100).sum().item()
-                logger.info(f"  Sample {idx}: masked {prompt_len} prompt tokens, {non_masked} answer tokens remain")
+                logger.info(f"✅ Sample {idx} PROCESSED: masked {prompt_len} prompt tokens, {non_masked} answer tokens remain")
+                logger.info(f"=" * 80)
         
         return {
             'input_ids': full_encodings['input_ids'].squeeze(),
