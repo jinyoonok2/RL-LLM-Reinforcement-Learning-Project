@@ -22,7 +22,9 @@ training:
   learning_rate: 5.0e-06
   warmup_steps: 100
   max_length: 512
-  fp16: true
+  fp16: false
+  bf16: true
+  bf16: true
 validation:
   eval_steps: 1563  # Validate at end of each epoch
   save_steps: 1563  # Save at end of each epoch

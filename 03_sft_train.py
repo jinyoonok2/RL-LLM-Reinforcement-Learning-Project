@@ -79,7 +79,8 @@ class SFTConfig:
     # Other
     seed: int = 42
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
-    fp16: bool = torch.cuda.is_available()
+    fp16: bool = False
+    bf16: bool = torch.cuda.is_available()
     
     @classmethod
     def from_args(cls, args):
@@ -130,6 +131,7 @@ class SFTConfig:
             config.max_length = train_cfg.get('max_length', config.max_length)
             config.gradient_accumulation_steps = train_cfg.get('gradient_accumulation_steps', config.gradient_accumulation_steps)
             config.fp16 = train_cfg.get('fp16', config.fp16)
+            config.bf16 = train_cfg.get('bf16', config.bf16)
         
         # Validation settings
         if 'validation' in yaml_config:
@@ -255,9 +257,20 @@ def setup_model(config: SFTConfig):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     
+    # Determine the correct torch dtype
+    dtype = torch.float32  # Default
+    if config.bf16:
+        dtype = torch.bfloat16
+        logger.info("Using bfloat16 for training.")
+    elif config.fp16:
+        dtype = torch.float16
+        logger.info("Using float16 for training.")
+    else:
+        logger.info("Using float32 for training.")
+    
     model = AutoModelForCausalLM.from_pretrained(
         config.base_model,
-        torch_dtype=torch.float16 if config.fp16 else torch.float32
+        torch_dtype=dtype
     )
     
     # Apply LoRA if specified
