@@ -223,14 +223,25 @@ class FinQADataset(Dataset):
         
         labels = full_encodings['input_ids'].clone()
         
+        # Debug first few samples
+        if idx < 3:
+            logger.info(f"Dataset sample {idx}:")
+            logger.info(f"  Prompt length: {prompt_len}")
+            logger.info(f"  Full text tokens: {full_encodings['input_ids'].shape[1]}")
+            logger.info(f"  Target text: {target_text[:100]}...")
+        
         # Mask the prompt part, keep the answer/target part for loss calculation
         # If prompt takes up all 512 tokens, we'd have no answer, so we need at least some space
         if prompt_len >= self.max_length - 10:  # Reserve at least 10 tokens for answer
             # Skip this sample - prompt too long to fit any meaningful answer
             labels[0, :] = -100
+            if idx < 3:
+                logger.warning(f"  Sample {idx} skipped: prompt too long ({prompt_len} >= {self.max_length - 10})")
         else:
             # Normal case: mask prompt, keep answer
             labels[0, :prompt_len] = -100
+            if idx < 3:
+                logger.info(f"  Sample {idx}: masked {prompt_len} prompt tokens, keeping {self.max_length - prompt_len} for answer")
         
         return {
             'input_ids': full_encodings['input_ids'].squeeze(),
