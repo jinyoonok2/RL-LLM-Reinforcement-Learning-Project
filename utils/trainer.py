@@ -152,7 +152,8 @@ class SFTTrainer:
                 
                 # Update weights
                 if (step + 1) % self.config.gradient_accumulation_steps == 0:
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    max_grad_norm = getattr(self.config, 'max_grad_norm', 1.0)
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_grad_norm)
                     optimizer.step()
                     scheduler.step()
                     optimizer.zero_grad()

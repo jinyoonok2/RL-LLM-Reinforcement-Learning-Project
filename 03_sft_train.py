@@ -130,6 +130,7 @@ class SFTConfig:
             config.warmup_steps = train_cfg.get('warmup_steps', config.warmup_steps)
             config.max_length = train_cfg.get('max_length', config.max_length)
             config.gradient_accumulation_steps = train_cfg.get('gradient_accumulation_steps', config.gradient_accumulation_steps)
+            config.max_grad_norm = train_cfg.get('max_grad_norm', config.max_grad_norm)
             config.fp16 = train_cfg.get('fp16', config.fp16)
             config.bf16 = train_cfg.get('bf16', config.bf16)
         
@@ -197,11 +198,20 @@ class FinQADataset(Dataset):
         # Create proper instruction format
         prompt = f"{input_text}\n\nQuestion: {question}\n\nProvide your answer in JSON format with 'answer' and 'program' fields:\n"
         
-        # Combine for causal LM training
-        full_text = f"{prompt}{target_text}"
+        # Combine for causal LM training (add EOS token)
+        full_text = f"{prompt}{target_text}{self.tokenizer.eos_token}"
         
-        # Tokenize
-        encodings = self.tokenizer(
+        # 1. Tokenize the prompt *without* truncation to get its true length
+        prompt_encodings = self.tokenizer(
+            prompt,
+            return_tensors='pt',
+            truncation=False,
+            padding=False
+        )
+        prompt_len = prompt_encodings['input_ids'].shape[1]
+        
+        # 2. Tokenize the full text *with* truncation and padding
+        full_encodings = self.tokenizer(
             full_text,
             truncation=True,
             max_length=self.max_length,
@@ -209,22 +219,20 @@ class FinQADataset(Dataset):
             return_tensors='pt'
         )
         
-        # Create labels (mask input part, only compute loss on target)
-        prompt_text = f"{input_text}\n\nQuestion: {question}\n\nProvide your answer in JSON format with 'answer' and 'program' fields:\n"
-        input_encodings = self.tokenizer(
-            prompt_text,
-            truncation=True,
-            max_length=self.max_length,
-            return_tensors='pt'
-        )
+        labels = full_encodings['input_ids'].clone()
         
-        input_len = input_encodings['input_ids'].shape[1]
-        labels = encodings['input_ids'].clone()
-        labels[0, :input_len] = -100  # Ignore input tokens in loss
+        # 3. Check if the prompt itself was longer than max_length
+        if prompt_len >= self.max_length:
+            # This sample is unusable, the answer is completely truncated.
+            # Mask the whole thing so it contributes zero to the loss.
+            labels[0, :] = -100
+        else:
+            # Mask only the prompt part
+            labels[0, :prompt_len] = -100
         
         return {
-            'input_ids': encodings['input_ids'].squeeze(),
-            'attention_mask': encodings['attention_mask'].squeeze(),
+            'input_ids': full_encodings['input_ids'].squeeze(),
+            'attention_mask': full_encodings['attention_mask'].squeeze(),
             'labels': labels.squeeze(),
             'example_id': example.get('id', ''),
             'question': example.get('question', ''),
