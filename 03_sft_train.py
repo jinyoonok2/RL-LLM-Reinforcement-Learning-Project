@@ -231,16 +231,10 @@ class FinQADataset(Dataset):
 
 
 def load_reward_function():
-    """Load reward function from 02_build_rewards.py."""
+    """Load reward function from utils.rewards."""
     try:
-        spec = importlib.util.spec_from_file_location(
-            "rewards",
-            Path(__file__).parent / "02_build_rewards.py"
-        )
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        
-        reward_fn = module.FinQARewardFunction()
+        from utils.rewards import FinQARewardCalculator
+        reward_fn = FinQARewardCalculator()
         logger.info("✅ Loaded reward function for validation")
         return reward_fn
     except Exception as e:
