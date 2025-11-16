@@ -140,6 +140,16 @@ class SFTTrainer:
                 
                 loss = outputs.loss / self.config.gradient_accumulation_steps
                 
+                # Debug: Check for issues in first batch
+                if step == 0:
+                    logger.info(f"First batch debug:")
+                    logger.info(f"  Input shape: {input_ids.shape}")
+                    logger.info(f"  Labels shape: {labels.shape}")
+                    logger.info(f"  Labels unique values: {labels.unique()}")
+                    logger.info(f"  Non-masked label count: {(labels != -100).sum().item()}")
+                    logger.info(f"  Raw loss: {outputs.loss.item()}")
+                    logger.info(f"  Loss after division: {loss.item()}")
+                
                 # Check for NaN/Inf before backward
                 if torch.isnan(loss) or torch.isinf(loss):
                     logger.warning(f"NaN/Inf loss detected at step {step}, skipping batch")
