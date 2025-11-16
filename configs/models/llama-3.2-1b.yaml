@@ -21,11 +21,10 @@ training:
   gradient_accumulation_steps: 4
   learning_rate: 1.0e-06
   warmup_steps: 100
-  max_length: 1024
+  max_length: 2048  # Increased to handle long FinQA prompts with financial tables
   fp16: false
   bf16: true
   max_grad_norm: 1.0
-  bf16: true
 validation:
   eval_steps: 1563  # Validate at end of each epoch
   save_steps: 1563  # Save at end of each epoch
