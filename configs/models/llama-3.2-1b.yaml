@@ -21,7 +21,7 @@ training:
   gradient_accumulation_steps: 4
   learning_rate: 1.0e-06
   warmup_steps: 100
-  max_length: 512
+  max_length: 1024
   fp16: false
   bf16: true
   max_grad_norm: 1.0

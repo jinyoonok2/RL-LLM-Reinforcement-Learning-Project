@@ -58,7 +58,7 @@ class SFTConfig:
     batch_size: int = 1
     learning_rate: float = 5e-6  # Lowered from 2e-5 to prevent NaN loss
     warmup_steps: int = 100
-    max_length: int = 512
+    max_length: int = 1024  # Increased for long FinQA prompts with tables
     gradient_accumulation_steps: int = 4
     max_grad_norm: float = 1.0  # Gradient clipping to prevent exploding gradients
     
@@ -231,12 +231,12 @@ class FinQADataset(Dataset):
             logger.info(f"  Target text: {target_text[:100]}...")
         
         # Mask the prompt part, keep the answer/target part for loss calculation
-        # If prompt takes up all 512 tokens, we'd have no answer, so we need at least some space
-        if prompt_len >= self.max_length - 10:  # Reserve at least 10 tokens for answer
+        # If prompt takes up almost all tokens, we'd have no answer, so we need at least some space
+        if prompt_len >= self.max_length - 50:  # Reserve at least 50 tokens for answer
             # Skip this sample - prompt too long to fit any meaningful answer
             labels[0, :] = -100
             if idx < 3:
-                logger.warning(f"  Sample {idx} skipped: prompt too long ({prompt_len} >= {self.max_length - 10})")
+                logger.warning(f"  Sample {idx} skipped: prompt too long ({prompt_len} >= {self.max_length - 50})")
         else:
             # Normal case: mask prompt, keep answer
             labels[0, :prompt_len] = -100
