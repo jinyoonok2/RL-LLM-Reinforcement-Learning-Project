@@ -26,8 +26,8 @@ training:
   bf16: true
   max_grad_norm: 1.0
 validation:
-  eval_steps: 1563  # Validate at end of each epoch
-  save_steps: 1563  # Save at end of each epoch
+  eval_steps: 1546  # Validate at end of each epoch (6185 samples / 4 grad_accum)
+  save_steps: 1546  # Save at end of each epoch
   logging_steps: 100
 generation:
   max_new_tokens: 128
