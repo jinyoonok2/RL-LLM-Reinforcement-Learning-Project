@@ -304,6 +304,10 @@ def setup_model(config: SFTConfig):
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
     
+    # Move model to device
+    model = model.to(config.device)
+    logger.info(f"Model moved to {config.device}")
+    
     return model, tokenizer
 
 

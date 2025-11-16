@@ -139,6 +139,13 @@ class SFTTrainer:
                 )
                 
                 loss = outputs.loss / self.config.gradient_accumulation_steps
+                
+                # Check for NaN/Inf before backward
+                if torch.isnan(loss) or torch.isinf(loss):
+                    logger.warning(f"NaN/Inf loss detected at step {step}, skipping batch")
+                    optimizer.zero_grad()
+                    continue
+                
                 loss.backward()
                 
                 epoch_loss += loss.item()
