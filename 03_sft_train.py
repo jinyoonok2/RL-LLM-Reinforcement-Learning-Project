@@ -262,6 +262,23 @@ class FinQADataset(Dataset):
         }
 
 
+def collate_fn(batch):
+    """Custom collate function to properly batch samples without corrupting labels."""
+    # Stack tensors manually to ensure labels aren't corrupted
+    input_ids = torch.stack([item['input_ids'] for item in batch])
+    attention_mask = torch.stack([item['attention_mask'] for item in batch])
+    labels = torch.stack([item['labels'] for item in batch])
+    
+    return {
+        'input_ids': input_ids,
+        'attention_mask': attention_mask,
+        'labels': labels,
+        'example_id': [item['example_id'] for item in batch],
+        'question': [item['question'] for item in batch],
+        'ground_truth': [item['ground_truth'] for item in batch]
+    }
+
+
 def load_reward_function():
     """Load reward function from utils.rewards."""
     try:
@@ -460,7 +477,8 @@ def main():
         model=model,
         tokenizer=tokenizer,
         config=config,
-        reward_fn=reward_fn
+        reward_fn=reward_fn,
+        collate_fn=collate_fn  # Use custom collate to preserve labels
     )
     
     # Train

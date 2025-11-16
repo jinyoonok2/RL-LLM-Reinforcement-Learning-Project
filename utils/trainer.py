@@ -42,7 +42,7 @@ class SFTTrainer:
     - Manifest generation
     """
     
-    def __init__(self, model, tokenizer, config, reward_fn=None):
+    def __init__(self, model, tokenizer, config, reward_fn=None, collate_fn=None):
         """
         Initialize SFT trainer.
         
@@ -51,11 +51,13 @@ class SFTTrainer:
             tokenizer: Pre-loaded tokenizer
             config: Training configuration object
             reward_fn: Optional reward function for validation
+            collate_fn: Optional custom collate function for DataLoader
         """
         self.model = model
         self.tokenizer = tokenizer
         self.config = config
         self.reward_fn = reward_fn
+        self.collate_fn = collate_fn
         self.device = torch.device(config.device)
         
         # Move model to device
@@ -100,7 +102,8 @@ class SFTTrainer:
             train_dataset,
             batch_size=self.config.batch_size,
             shuffle=True,
-            num_workers=0
+            num_workers=0,
+            collate_fn=self.collate_fn  # Use custom collate if provided
         )
         
         # Setup optimizer and scheduler
