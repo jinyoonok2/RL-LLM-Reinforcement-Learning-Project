@@ -140,19 +140,26 @@ class SFTTrainer:
                 
                 loss = outputs.loss / self.config.gradient_accumulation_steps
                 
-                # Debug: Check for issues in first batch
-                if step == 0:
-                    logger.info(f"First batch debug:")
-                    logger.info(f"  Input shape: {input_ids.shape}")
-                    logger.info(f"  Labels shape: {labels.shape}")
-                    logger.info(f"  Labels unique values: {labels.unique()}")
-                    logger.info(f"  Non-masked label count: {(labels != -100).sum().item()}")
-                    logger.info(f"  Raw loss: {outputs.loss.item()}")
-                    logger.info(f"  Loss after division: {loss.item()}")
+                # Debug: Check for issues in first few batches
+                if step < 3 or (torch.isnan(loss) or torch.isinf(loss)):
+                    logger.info(f"Batch {step} debug:")
+                    logger.info(f"  Input shape: {input_ids.shape}, dtype: {input_ids.dtype}, device: {input_ids.device}")
+                    logger.info(f"  Labels shape: {labels.shape}, dtype: {labels.dtype}")
+                    logger.info(f"  Non-masked labels: {(labels != -100).sum().item()} / {labels.numel()}")
+                    logger.info(f"  Model dtype: {next(self.model.parameters()).dtype}")
+                    logger.info(f"  Raw loss: {outputs.loss.item() if outputs.loss is not None else 'None'}")
+                    logger.info(f"  Scaled loss: {loss.item()}")
+                    
+                    # Check for NaN in model parameters
+                    has_nan_params = any(torch.isnan(p).any() for p in self.model.parameters())
+                    logger.info(f"  Model has NaN params: {has_nan_params}")
                 
                 # Check for NaN/Inf before backward
                 if torch.isnan(loss) or torch.isinf(loss):
                     logger.warning(f"NaN/Inf loss detected at step {step}, skipping batch")
+                    if step < 10:
+                        logger.error("Getting NaN in first 10 steps - training cannot proceed!")
+                        raise RuntimeError("Training failed with NaN loss in early steps")
                     optimizer.zero_grad()
                     continue
                 
