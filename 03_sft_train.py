@@ -426,6 +426,18 @@ def main():
     train_dataset = FinQADataset(train_file, tokenizer, config.max_length)
     val_dataset = FinQADataset(val_file, tokenizer, config.max_length)
     
+    # Test first sample to verify dataset processing
+    logger.info("🧪 Testing first training sample:")
+    test_sample = train_dataset[0]
+    logger.info(f"  Input IDs shape: {test_sample['input_ids'].shape}")
+    logger.info(f"  Labels shape: {test_sample['labels'].shape}")
+    test_non_masked = (test_sample['labels'] != -100).sum().item()
+    logger.info(f"  Non-masked labels in sample 0: {test_non_masked}")
+    if test_non_masked == 0:
+        logger.error("❌ CRITICAL: Sample 0 has 0 non-masked labels!")
+    else:
+        logger.info(f"✅ Sample 0 has {test_non_masked} non-masked labels - looks good!")
+    
     # Quick test mode
     if args.quick_test:
         logger.info("🧪 Running in quick test mode (100 train, 20 val examples)")
