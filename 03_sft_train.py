@@ -60,6 +60,7 @@ class SFTConfig:
     warmup_steps: int = 100
     max_length: int = 512
     gradient_accumulation_steps: int = 4
+    max_grad_norm: float = 1.0  # Gradient clipping to prevent exploding gradients
     
     # Validation settings
     eval_steps: int = 1563  # ~1 epoch (6251 samples / 4 grad_accum)
