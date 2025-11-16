@@ -83,16 +83,13 @@ class ModelEvaluator:
             Generated text (empty string on error)
         """
         try:
-            # Move to CPU to avoid CUDA issues during generation
-            original_device = next(self.model.parameters()).device
-            self.model.cpu()
-            
+            # Tokenize and move to GPU
             inputs = self.tokenizer(
                 input_text,
                 return_tensors='pt',
                 truncation=True,
                 max_length=max_length
-            )
+            ).to(self.device)
             
             # Use greedy decoding (most stable)
             with torch.no_grad():
@@ -107,9 +104,6 @@ class ModelEvaluator:
                     early_stopping=True
                 )
             
-            # Move back to original device
-            self.model.to(original_device)
-            
             # Decode only the generated part
             generated_ids = outputs[0][inputs['input_ids'].shape[1]:]
             prediction = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
@@ -117,7 +111,6 @@ class ModelEvaluator:
             return prediction.strip()
         
         except Exception as e:
-            # Move back to device even on error
             self.model.to(original_device)
             logger.warning(f"Generation failed: {str(e)[:100]}, returning empty")
             return ""
