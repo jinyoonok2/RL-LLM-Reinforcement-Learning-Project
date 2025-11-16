@@ -96,7 +96,7 @@ class ModelEvaluator:
                 outputs = self.model.generate(
                     input_ids=inputs['input_ids'],
                     attention_mask=inputs['attention_mask'],
-                    max_new_tokens=min(self.max_new_tokens, 64),  # Limit length
+                    max_new_tokens=min(self.max_new_tokens, 128),  # Increased for JSON output
                     do_sample=False,  # Greedy (no sampling)
                     pad_token_id=self.tokenizer.pad_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,

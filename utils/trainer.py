@@ -174,9 +174,11 @@ class SFTTrainer:
                             'lr': f'{scheduler.get_last_lr()[0]:.2e}'
                         })
                     
-                    # Validation (skip if this is the last step of epoch - will validate after loop)
-                    is_last_step = (step == len(train_loader) - 1)
-                    if self.global_step % self.config.eval_steps == 0 and not is_last_step and not getattr(self.config, 'skip_validation', False):
+                    # Validation (skip if we're within the last gradient_accumulation_steps samples)
+                    # This prevents duplicate validation when global_step aligns with epoch end
+                    samples_remaining = len(train_loader) - step - 1
+                    is_near_epoch_end = samples_remaining < self.config.gradient_accumulation_steps
+                    if self.global_step % self.config.eval_steps == 0 and not is_near_epoch_end and not getattr(self.config, 'skip_validation', False):
                         val_reward = self.validate(val_dataset)
                         self.val_rewards.append(val_reward)
                         self.model.train()
