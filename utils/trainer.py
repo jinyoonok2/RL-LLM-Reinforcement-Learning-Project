@@ -174,8 +174,9 @@ class SFTTrainer:
                             'lr': f'{scheduler.get_last_lr()[0]:.2e}'
                         })
                     
-                    # Validation
-                    if self.global_step % self.config.eval_steps == 0 and not getattr(self.config, 'skip_validation', False):
+                    # Validation (skip if this is the last step of epoch - will validate after loop)
+                    is_last_step = (step == len(train_loader) - 1)
+                    if self.global_step % self.config.eval_steps == 0 and not is_last_step and not getattr(self.config, 'skip_validation', False):
                         val_reward = self.validate(val_dataset)
                         self.val_rewards.append(val_reward)
                         self.model.train()
@@ -187,6 +188,7 @@ class SFTTrainer:
             # End of epoch validation
             if not getattr(self.config, 'skip_validation', False):
                 val_reward = self.validate(val_dataset)
+                self.val_rewards.append(val_reward)
                 logger.info(f"Epoch {epoch + 1} - Avg Loss: {epoch_loss / len(train_loader):.4f}, Val Reward: {val_reward:.4f}")
             else:
                 logger.info(f"Epoch {epoch + 1} - Avg Loss: {epoch_loss / len(train_loader):.4f}")
