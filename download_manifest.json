@@ -1,9 +1,9 @@
 {
-    "timestamp": "2025-10-26T06:36:52Z",
+    "timestamp": "2025-11-16T20:42:52Z",
     "dataset_downloaded": true,
     "model_downloaded": false,
-    "model_name": "microsoft/DialoGPT-medium",
+    "model_name": "meta-llama/Llama-3.2-1B-Instruct",
     "dataset_dir": "datasets/finqa",
     "model_dir": "models",
-    "project_size": "9.1G"
+    "project_size": "8.3G"
 }

@@ -33,6 +33,7 @@ class SFTConfig:
     epochs: int = 3
     batch_size: int = 1
     learning_rate: float = 1e-6
+    warmup_steps: int = 100
     max_length: int = 2048
     gradient_accumulation_steps: int = 4
     max_grad_norm: float = 1.0
@@ -83,7 +84,7 @@ class SFTConfig:
         
         # Training
         train_cfg = cfg_dict.get('training', {})
-        for key in ['epochs', 'batch_size', 'learning_rate', 'max_length', 
+        for key in ['epochs', 'batch_size', 'learning_rate', 'warmup_steps', 'max_length', 
                     'gradient_accumulation_steps', 'max_grad_norm', 'bf16', 'fp16']:
             if key in train_cfg:
                 setattr(config, key, train_cfg[key])
