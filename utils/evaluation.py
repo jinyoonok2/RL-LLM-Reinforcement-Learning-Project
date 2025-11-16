@@ -111,7 +111,6 @@ class ModelEvaluator:
             return prediction.strip()
         
         except Exception as e:
-            self.model.to(original_device)
             logger.warning(f"Generation failed: {str(e)[:100]}, returning empty")
             return ""
     
