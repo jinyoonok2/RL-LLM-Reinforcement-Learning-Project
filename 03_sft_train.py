@@ -264,10 +264,24 @@ class FinQADataset(Dataset):
 
 def collate_fn(batch):
     """Custom collate function to properly batch samples without corrupting labels."""
+    # Debug first batch
+    if len(batch) > 0:
+        logger.info(f"🔍 COLLATE DEBUG:")
+        logger.info(f"  Batch size: {len(batch)}")
+        logger.info(f"  Sample 0 labels shape before stack: {batch[0]['labels'].shape}")
+        logger.info(f"  Sample 0 non-masked before stack: {(batch[0]['labels'] != -100).sum().item()}")
+        logger.info(f"  Sample 0 labels dtype: {batch[0]['labels'].dtype}")
+        logger.info(f"  First 10 labels: {batch[0]['labels'][:10].tolist()}")
+        logger.info(f"  Last 10 labels: {batch[0]['labels'][-10:].tolist()}")
+    
     # Stack tensors manually to ensure labels aren't corrupted
     input_ids = torch.stack([item['input_ids'] for item in batch])
     attention_mask = torch.stack([item['attention_mask'] for item in batch])
     labels = torch.stack([item['labels'] for item in batch])
+    
+    if len(batch) > 0:
+        logger.info(f"  After stack - labels shape: {labels.shape}")
+        logger.info(f"  After stack - non-masked: {(labels != -100).sum().item()}")
     
     return {
         'input_ids': input_ids,
