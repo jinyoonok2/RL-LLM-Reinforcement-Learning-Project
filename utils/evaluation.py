@@ -140,11 +140,12 @@ class ModelEvaluator:
         samples = []
         parse_success = 0
         
-        # Determine sample indices
+        # Determine sample indices - use fixed seed for reproducibility
         if num_samples is None:
             indices = list(range(len(dataset)))
         else:
-            indices = np.random.choice(
+            rng = np.random.RandomState(42)  # Fixed seed for consistent validation
+            indices = rng.choice(
                 len(dataset),
                 min(num_samples, len(dataset)),
                 replace=False
