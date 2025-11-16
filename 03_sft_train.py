@@ -249,26 +249,11 @@ class FinQADataset(Dataset):
         
         labels = full_encodings['input_ids'].clone()
         
-        # Debug first few samples - ALWAYS log sample 0 to verify code is running
-        if idx == 0:
-            logger.info(f"=" * 80)
-            logger.info(f"🔍 DATASET DEBUG - Sample {idx}:")
-            logger.info(f"  Prompt length: {prompt_len} tokens")
-            logger.info(f"  Full text tokens: {full_encodings['input_ids'].shape[1]}")
-            logger.info(f"  Attention mask sum: {full_encodings['attention_mask'].sum().item()}")
-            logger.info(f"  Target text preview: {target_text[:100]}...")
-            logger.info(f"=" * 80)
-        
         # Mask the prompt part, keep the answer/target part for loss calculation
         # All invalid samples have been filtered out during __init__, so we just mask normally
         labels[0, :prompt_len] = -100
         # ALSO mask padding tokens (where attention_mask is 0)
         labels[0, full_encodings['attention_mask'][0] == 0] = -100
-        
-        if idx == 0:
-            non_masked = (labels[0] != -100).sum().item()
-            logger.info(f"✅ Sample {idx} PROCESSED: masked {prompt_len} prompt tokens, {non_masked} answer tokens remain")
-            logger.info(f"=" * 80)
         
         return {
             'input_ids': full_encodings['input_ids'].squeeze(),
@@ -282,31 +267,10 @@ class FinQADataset(Dataset):
 
 def collate_fn(batch):
     """Custom collate function to properly batch samples without corrupting labels."""
-    # Debug first batch
-    if len(batch) > 0:
-        logger.info(f"🔍 COLLATE DEBUG:")
-        logger.info(f"  Batch size: {len(batch)}")
-        logger.info(f"  Sample 0 example_id: {batch[0].get('example_id', 'unknown')}")
-        logger.info(f"  Sample 0 labels shape before stack: {batch[0]['labels'].shape}")
-        logger.info(f"  Sample 0 non-masked before stack: {(batch[0]['labels'] != -100).sum().item()}")
-        logger.info(f"  Sample 0 labels dtype: {batch[0]['labels'].dtype}")
-        logger.info(f"  First 10 labels: {batch[0]['labels'][:10].tolist()}")
-        logger.info(f"  Last 10 labels: {batch[0]['labels'][-10:].tolist()}")
-        # Check where non-masked labels are
-        non_masked_indices = (batch[0]['labels'] != -100).nonzero(as_tuple=True)[0]
-        if len(non_masked_indices) > 0:
-            logger.info(f"  Non-masked label positions: {non_masked_indices[:20].tolist()}")
-        else:
-            logger.warning(f"  ⚠️ NO NON-MASKED LABELS! This sample should have been filtered!")
-    
     # Stack tensors manually to ensure labels aren't corrupted
     input_ids = torch.stack([item['input_ids'] for item in batch])
     attention_mask = torch.stack([item['attention_mask'] for item in batch])
     labels = torch.stack([item['labels'] for item in batch])
-    
-    if len(batch) > 0:
-        logger.info(f"  After stack - labels shape: {labels.shape}")
-        logger.info(f"  After stack - non-masked: {(labels != -100).sum().item()}")
     
     return {
         'input_ids': input_ids,
@@ -482,32 +446,8 @@ def main():
     train_dataset = FinQADataset(train_file, tokenizer, config.max_length)
     val_dataset = FinQADataset(val_file, tokenizer, config.max_length)
     
-    # Test first sample to verify dataset processing
-    logger.info("🧪 Testing first training sample:")
-    test_sample = train_dataset[0]
-    logger.info(f"  Input IDs shape: {test_sample['input_ids'].shape}")
-    logger.info(f"  Labels shape: {test_sample['labels'].shape}")
-    test_non_masked = (test_sample['labels'] != -100).sum().item()
-    logger.info(f"  Non-masked labels in sample 0: {test_non_masked}")
-    if test_non_masked == 0:
-        logger.error("❌ CRITICAL: Sample 0 has 0 non-masked labels!")
-    else:
-        logger.info(f"✅ Sample 0 has {test_non_masked} non-masked labels - looks good!")
-    
-    # Check how many samples have valid labels
-    logger.info("🔍 Scanning dataset for valid samples...")
-    valid_count = 0
-    invalid_count = 0
-    for i in range(min(100, len(train_dataset))):
-        sample = train_dataset[i]
-        if (sample['labels'] != -100).sum().item() > 0:
-            valid_count += 1
-        else:
-            invalid_count += 1
-    logger.info(f"  First 100 samples: {valid_count} valid, {invalid_count} invalid (all labels masked)")
-    if invalid_count > 50:
-        logger.error(f"❌ CRITICAL: {invalid_count}% of samples have all labels masked!")
-        logger.error("   This suggests max_length is too small or prompts are too long!")
+    # Datasets loaded and filtered - ready to train
+    logger.info(f"✅ Training with {len(train_dataset)} samples, validating with {len(val_dataset)} samples")
     
     # Quick test mode
     if args.quick_test:
