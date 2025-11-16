@@ -268,11 +268,18 @@ def collate_fn(batch):
     if len(batch) > 0:
         logger.info(f"🔍 COLLATE DEBUG:")
         logger.info(f"  Batch size: {len(batch)}")
+        logger.info(f"  Sample 0 example_id: {batch[0].get('example_id', 'unknown')}")
         logger.info(f"  Sample 0 labels shape before stack: {batch[0]['labels'].shape}")
         logger.info(f"  Sample 0 non-masked before stack: {(batch[0]['labels'] != -100).sum().item()}")
         logger.info(f"  Sample 0 labels dtype: {batch[0]['labels'].dtype}")
         logger.info(f"  First 10 labels: {batch[0]['labels'][:10].tolist()}")
         logger.info(f"  Last 10 labels: {batch[0]['labels'][-10:].tolist()}")
+        # Check where non-masked labels are
+        non_masked_indices = (batch[0]['labels'] != -100).nonzero(as_tuple=True)[0]
+        if len(non_masked_indices) > 0:
+            logger.info(f"  Non-masked label positions: {non_masked_indices[:20].tolist()}")
+        else:
+            logger.warning(f"  ⚠️ NO NON-MASKED LABELS! This sample should have been filtered!")
     
     # Stack tensors manually to ensure labels aren't corrupted
     input_ids = torch.stack([item['input_ids'] for item in batch])
@@ -468,6 +475,21 @@ def main():
         logger.error("❌ CRITICAL: Sample 0 has 0 non-masked labels!")
     else:
         logger.info(f"✅ Sample 0 has {test_non_masked} non-masked labels - looks good!")
+    
+    # Check how many samples have valid labels
+    logger.info("🔍 Scanning dataset for valid samples...")
+    valid_count = 0
+    invalid_count = 0
+    for i in range(min(100, len(train_dataset))):
+        sample = train_dataset[i]
+        if (sample['labels'] != -100).sum().item() > 0:
+            valid_count += 1
+        else:
+            invalid_count += 1
+    logger.info(f"  First 100 samples: {valid_count} valid, {invalid_count} invalid (all labels masked)")
+    if invalid_count > 50:
+        logger.error(f"❌ CRITICAL: {invalid_count}% of samples have all labels masked!")
+        logger.error("   This suggests max_length is too small or prompts are too long!")
     
     # Quick test mode
     if args.quick_test:
