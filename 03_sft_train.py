@@ -162,12 +162,13 @@ class SFTConfig:
 class FinQADataset(Dataset):
     """Dataset class for FinQA preprocessed data."""
     
-    def __init__(self, data_file: Path, tokenizer, max_length: int = 512):
+    def __init__(self, data_file: Path, tokenizer, max_length: int = 1024):
         self.tokenizer = tokenizer
         self.max_length = max_length
         
         # Load preprocessed data (JSONL format)
         logger.info(f"Loading data from {data_file}")
+        logger.info(f"Using max_length: {max_length}")
         self.examples = []
         with open(data_file, 'r') as f:
             for line in f:
