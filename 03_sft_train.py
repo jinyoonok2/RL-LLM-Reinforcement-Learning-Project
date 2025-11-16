@@ -180,6 +180,30 @@ class FinQADataset(Dataset):
         # Add special tokens if not present
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
+        
+        # Filter out samples that will have no trainable tokens
+        # (This happens when prompts are too long to fit any answer)
+        logger.info("Filtering samples with prompts that are too long...")
+        original_count = len(self.examples)
+        valid_examples = []
+        
+        for idx, example in enumerate(self.examples):
+            # Quick check: tokenize just the prompt to see if it fits
+            input_text = example['input_text']
+            question = example.get('question', '')
+            prompt = f"{input_text}\n\nQuestion: {question}\n\nProvide your answer in JSON format with 'answer' and 'program' fields:\n"
+            
+            prompt_tokens = tokenizer(prompt, truncation=True, max_length=max_length, return_tensors='pt')
+            prompt_len = prompt_tokens['input_ids'].shape[1]
+            
+            # Keep only if there's room for at least 50 tokens of answer
+            if prompt_len < max_length - 50:
+                valid_examples.append(example)
+        
+        self.examples = valid_examples
+        filtered_count = original_count - len(valid_examples)
+        logger.info(f"  Filtered out {filtered_count}/{original_count} samples ({filtered_count/original_count*100:.1f}%)")
+        logger.info(f"  Kept {len(valid_examples)} valid samples")
     
     def __len__(self):
         return len(self.examples)
@@ -236,21 +260,15 @@ class FinQADataset(Dataset):
             logger.info(f"=" * 80)
         
         # Mask the prompt part, keep the answer/target part for loss calculation
-        # If prompt takes up almost all tokens, we'd have no answer, so we need at least some space
-        if prompt_len >= self.max_length - 50:  # Reserve at least 50 tokens for answer
-            # Skip this sample - prompt too long to fit any meaningful answer
-            labels[0, :] = -100
-            if idx < 3:
-                logger.warning(f"  Sample {idx} skipped: prompt too long ({prompt_len} >= {self.max_length - 50})")
-        else:
-            # Normal case: mask prompt, keep answer
-            labels[0, :prompt_len] = -100
-            # ALSO mask padding tokens (where attention_mask is 0)
-            labels[0, full_encodings['attention_mask'][0] == 0] = -100
-            if idx == 0:
-                non_masked = (labels[0] != -100).sum().item()
-                logger.info(f"✅ Sample {idx} PROCESSED: masked {prompt_len} prompt tokens, {non_masked} answer tokens remain")
-                logger.info(f"=" * 80)
+        # All invalid samples have been filtered out during __init__, so we just mask normally
+        labels[0, :prompt_len] = -100
+        # ALSO mask padding tokens (where attention_mask is 0)
+        labels[0, full_encodings['attention_mask'][0] == 0] = -100
+        
+        if idx == 0:
+            non_masked = (labels[0] != -100).sum().item()
+            logger.info(f"✅ Sample {idx} PROCESSED: masked {prompt_len} prompt tokens, {non_masked} answer tokens remain")
+            logger.info(f"=" * 80)
         
         return {
             'input_ids': full_encodings['input_ids'].squeeze(),
