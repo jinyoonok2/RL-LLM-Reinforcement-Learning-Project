@@ -1,0 +1,35 @@
+# Improved PPO Configuration
+# More aggressive settings for better FinQA performance
+
+# Core PPO parameters
+learning_rate: 3.0e-5  # Higher than default
+clip_range: 0.25       # Slightly larger for more aggressive updates
+kl_coef: 0.01          # Lower KL penalty for more exploration
+target_kl: 0.2         # Higher target KL
+
+# Training dynamics
+ppo_epochs: 8          # More epochs per update
+batch_size: 32         # Larger batch size if memory allows
+mini_batch_size: 4     # Larger mini-batches
+gradient_accumulation_steps: 2
+
+# Generation parameters
+max_new_tokens: 96     # Shorter for faster training
+temperature: 0.9       # Higher temperature for exploration
+top_p: 0.95           # High top_p for diversity
+do_sample: true
+
+# Regularization
+max_grad_norm: 0.5     # Tighter gradient clipping
+weight_decay: 0.01     # Small weight decay
+
+# Schedule
+warmup_steps: 50       # Shorter warmup
+total_steps: 1000      # Reasonable total steps
+eval_steps: 50         # Frequent evaluation
+save_steps: 100        # Regular checkpointing
+
+# Reward processing
+normalize_rewards: true
+reward_scaling: 2.0    # Scale rewards for better signal
+advantage_normalization: true

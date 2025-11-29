@@ -27,9 +27,9 @@ class RewardComponents:
 class FinQARewardCalculator:
     """Unified reward calculator for FinQA - handles both ternary and component-based rewards."""
     
-    def __init__(self, numerical_tolerance: float = 0.05, percentage_tolerance: float = 0.02):
-        self.numerical_tolerance = numerical_tolerance
-        self.percentage_tolerance = percentage_tolerance
+    def __init__(self, numerical_tolerance: float = 0.10, percentage_tolerance: float = 0.05):
+        self.numerical_tolerance = numerical_tolerance  # Increased from 0.05 to 0.10
+        self.percentage_tolerance = percentage_tolerance  # Increased from 0.02 to 0.05
         
     def normalize_answer(self, answer: str) -> str:
         """Normalize answer for comparison."""
@@ -88,13 +88,26 @@ class FinQARewardCalculator:
         if pred_norm == truth_norm:
             return (1, "exact_match")
         
-        # Numerical near-miss
+        # Numerical near-miss (more generous scoring)
         if self.is_numerical_close(predicted, ground_truth):
-            return (0, "numerical_close")
+            return (0.5, "numerical_close")  # Better than 0 for close answers
+        
+        # Partial numerical credit (within 20%)
+        pred_num = self.extract_number(predicted)
+        truth_num = self.extract_number(ground_truth)
+        if pred_num is not None and truth_num is not None:
+            if truth_num != 0:
+                relative_diff = abs(pred_num - truth_num) / abs(truth_num)
+                if relative_diff <= 0.20:  # Within 20%
+                    return (0.3, f"partial_numerical_{relative_diff:.2f}")
         
         # Qualitative attempt (if long enough)
         if question and any(w in question.lower() for w in ['why', 'how', 'explain']) and len(predicted.strip()) > 10:
-            return (0, "qualitative_attempt")
+            return (0.2, "qualitative_attempt")
+        
+        # At least attempted an answer
+        if len(predicted.strip()) > 5:
+            return (-0.5, "incorrect_attempt")  # Less penalty for trying
         
         return (-1, "incorrect")
     
@@ -120,7 +133,7 @@ class FinQARewardCalculator:
             RewardComponents with detailed scores
         """
         if weights is None:
-            weights = {'exact': 1.0, 'numerical': 0.8, 'program': 0.3, 'format': 0.2}
+            weights = {'exact': 1.0, 'numerical': 0.9, 'program': 0.5, 'format': 0.3}  # Higher rewards for partial credit
         
         components = RewardComponents()
         

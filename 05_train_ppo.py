@@ -40,24 +40,24 @@ class PPOConfig:
     output_dir: str = "outputs/run_001/05_ppo"
     
     # PPO hyperparameters
-    learning_rate: float = 1.41e-5
-    batch_size: int = 8
-    mini_batch_size: int = 1
-    gradient_accumulation_steps: int = 8
-    ppo_epochs: int = 4
-    clip_range: float = 0.2
-    kl_coef: float = 0.05
-    target_kl: float = 0.1
+    learning_rate: float = 5.0e-5  # Higher learning rate
+    batch_size: int = 16  # Larger batch size
+    mini_batch_size: int = 2  # Larger mini-batches
+    gradient_accumulation_steps: int = 4  # Adjusted for larger batches
+    ppo_epochs: int = 6  # More PPO epochs per update
+    clip_range: float = 0.3  # Slightly larger clip range
+    kl_coef: float = 0.02  # Lower KL penalty for more exploration
+    target_kl: float = 0.15  # Higher target KL
     
     # Generation
-    max_new_tokens: int = 256
-    temperature: float = 0.7
-    top_p: float = 0.9
+    max_new_tokens: int = 128  # Reduced for faster training
+    temperature: float = 0.8  # Slightly higher for more exploration
+    top_p: float = 0.95  # Higher top_p for diversity
     
     # Training schedule
-    total_ppo_epochs: int = 100
-    save_freq: int = 10
-    eval_freq: int = 5
+    total_ppo_epochs: int = 50  # Fewer epochs but more effective
+    save_freq: int = 5  # More frequent saves
+    eval_freq: int = 2  # More frequent evaluation
     
     # Reward
     normalize_reward: bool = True

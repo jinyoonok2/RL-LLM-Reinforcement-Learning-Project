@@ -7,21 +7,21 @@ model:
   vocab_size: 128256
 lora:
   use_lora: true
-  r: 32
-  alpha: 64
-  dropout: 0.05
+  r: 16          # Reduced rank for faster training
+  alpha: 32      # Adjusted scaling (2x rank)
+  dropout: 0.1   # Slightly higher dropout for better generalization
   target_modules:
   - q_proj
   - v_proj
   - k_proj
   - o_proj
 training:
-  epochs: 3
-  batch_size: 1
-  gradient_accumulation_steps: 4
-  learning_rate: 2.0e-05  # Increased from 1e-6 for LoRA (standard LoRA LR)
-  warmup_steps: 100
-  max_length: 2048  # Balance: keeps ~85-90% of data, 2x slower than 1024
+  epochs: 5  # Increased epochs
+  batch_size: 4  # Increased batch size for 1B model
+  gradient_accumulation_steps: 4  # Effective batch size of 16
+  learning_rate: 8.0e-05  # Higher LR works well with LoRA
+  warmup_steps: 200  # More warmup steps
+  max_length: 1024  # Reduced for faster training, covers most samples
   fp16: false
   bf16: true
   max_grad_norm: 1.0
@@ -38,4 +38,4 @@ paths:
   output_dir: outputs/run_001/03_sft
   reward_spec: outputs/run_001/02_rewards/reward_spec.yaml
 metadata:
-  description: Fast 1B model for testing - default configuration
+  description: Lightweight 1B model optimized for fast LoRA training
