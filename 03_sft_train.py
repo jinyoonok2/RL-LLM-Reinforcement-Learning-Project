@@ -117,9 +117,12 @@ class FinQADataset(Dataset):
         self.tokenizer = tokenizer
         self.max_length = max_length
         
-        # Ensure pad token exists
+        # Ensure pad token exists (same logic as setup_model)
         if tokenizer.pad_token is None:
-            tokenizer.pad_token = tokenizer.eos_token
+            if hasattr(tokenizer, 'eos_token') and tokenizer.eos_token is not None:
+                tokenizer.pad_token = tokenizer.eos_token
+            else:
+                tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         
         # Load and filter data
         logger.info(f"Loading data from {data_file}")
@@ -205,8 +208,14 @@ def setup_model(config: SFTConfig):
     logger.info(f"Loading model: {config.base_model}")
     tokenizer = AutoTokenizer.from_pretrained(config.base_model)
     
+    # Handle pad token for different architectures
     if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+        if hasattr(tokenizer, 'eos_token') and tokenizer.eos_token is not None:
+            tokenizer.pad_token = tokenizer.eos_token
+            logger.info(f"Set pad_token to eos_token: {tokenizer.eos_token}")
+        else:
+            tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+            logger.info("Added new pad_token: [PAD]")
     
     # Determine dtype
     dtype = torch.bfloat16 if config.bf16 else (torch.float16 if config.fp16 else torch.float32)
@@ -217,8 +226,17 @@ def setup_model(config: SFTConfig):
     # Apply LoRA
     if config.use_lora:
         logger.info("Applying LoRA adapters")
-        target_modules = config.lora_target_modules or ["q_proj", "v_proj", "k_proj", "o_proj"]
-        logger.info(f"LoRA targets: {target_modules}")
+        target_modules = config.lora_target_modules
+        if target_modules is None:
+            # Auto-detect based on model architecture
+            model_type = model.config.model_type.lower()
+            if 'gpt2' in model_type or 'dialogpt' in config.base_model.lower():
+                target_modules = ["c_attn", "c_proj"]  # GPT-2 style
+            else:
+                target_modules = ["q_proj", "v_proj", "k_proj", "o_proj"]  # Llama style
+            logger.info(f"Auto-detected LoRA targets for {model_type}: {target_modules}")
+        else:
+            logger.info(f"Using configured LoRA targets: {target_modules}")
         
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,

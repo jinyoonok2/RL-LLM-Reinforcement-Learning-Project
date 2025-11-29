@@ -70,15 +70,21 @@ This project implements and compares multiple reinforcement learning methods for
 
 ### Model Selection
 
-**Default (Fast Testing)**: Llama-3.2-1B (~2.5GB)
-- Training: ~8x faster than 8B model
-- Memory: Fits on 8GB+ GPU
-- Quality: Good for iteration and debugging
+**Ultra-Fast (DialoGPT)**: 863MB, ~20-30 min training
+- Use: `--config configs/models/dialogpt-medium.yaml`
+- Best for: Rapid prototyping and algorithm development
 
-**Production**: Llama-3-8B (~15GB)
-- Training: Better final performance
-- Memory: Requires 24GB+ GPU with LoRA
-- Use: `--config configs/models/llama-3-8b.yaml`
+**Fast (TinyLlama)**: 2.2GB, ~40-60 min training  
+- Use: `--config configs/models/tinyllama-1.1b.yaml`
+- Best for: Testing Llama-style architectures quickly
+
+**Balanced (Llama-3.2-1B)**: 2.5GB, ~60-90 min training
+- Use: `--config configs/models/llama-3.2-1b.yaml` (default)
+- Best for: Good balance of speed and quality
+
+**Ultra-Fast Mode**: Any model with rank-8 LoRA
+- Use: `--config configs/models/llama-3.2-1b-ultrafast.yaml`
+- Best for: Lightning-fast iterations
 
 ## 📁 Project Structure
 

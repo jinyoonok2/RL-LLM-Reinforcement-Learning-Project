@@ -7,7 +7,7 @@ model:
   vocab_size: 128256
 lora:
   use_lora: true
-  r: 16          # Reduced rank for faster training
+  r: 16          # Rank 16 = ~262M trainable params (22% of model)
   alpha: 32      # Adjusted scaling (2x rank)
   dropout: 0.1   # Slightly higher dropout for better generalization
   target_modules:
