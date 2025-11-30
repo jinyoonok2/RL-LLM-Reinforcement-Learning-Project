@@ -20,6 +20,7 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Default settings
 DOWNLOAD_DATASET=true
 DOWNLOAD_MODEL=true
+DOWNLOAD_ALL_MODELS=false
 MODEL_NAME="meta-llama/Llama-3.2-1B-Instruct"  # Default: Fast 1B model for testing
 OUTPUT_DIR="datasets/finqa"
 MODEL_DIR="models"
@@ -38,12 +39,14 @@ show_help() {
     echo "  --token TOKEN        HuggingFace authentication token"
     echo "  --output-dir DIR     Dataset output directory (default: datasets/finqa)"
     echo "  --model-dir DIR      Model output directory (default: models)"
+    echo "  --full               Download all lightweight models (DialoGPT, TinyLlama, Llama-3.2-1B)"
     echo "  --force              Force re-download even if files exist"
     echo "  --help               Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0                                            # Download dataset + Llama-3.2-1B (default)"
     echo "  $0 --model meta-llama/Meta-Llama-3-8B-Instruct  # Download 8B model instead"
+    echo "  $0 --full                                     # Download dataset + all lightweight models"
     echo "  $0 --dataset-only                             # Only download FinQA dataset"
     echo "  $0 --model-only                               # Only download default model"
     echo "  $0 --force                                    # Re-download everything"
@@ -80,6 +83,10 @@ while [[ $# -gt 0 ]]; do
         --model-dir)
             MODEL_DIR="$2"
             shift 2
+            ;;
+        --full)
+            DOWNLOAD_ALL_MODELS=true
+            shift
             ;;
         --force)
             FORCE_DOWNLOAD=true
@@ -397,8 +404,36 @@ if [ "$DOWNLOAD_DATASET" = true ]; then
     download_finqa_dataset
 fi
 
-# Download model if requested
-if [ "$DOWNLOAD_MODEL" = true ]; then
+# Download model(s) if requested
+if [ "$DOWNLOAD_ALL_MODELS" = true ]; then
+    print_status "🚀 Downloading ALL lightweight models for maximum flexibility..."
+    echo ""
+    
+    # Define lightweight models
+    LIGHTWEIGHT_MODELS=(
+        "microsoft/DialoGPT-medium"                 # Ultra-fast (~863MB)
+        "TinyLlama/TinyLlama-1.1B-Chat-v1.0"      # Fast Llama (~2.2GB)
+        "meta-llama/Llama-3.2-1B-Instruct"        # Balanced (~2.5GB)
+    )
+    
+    TOTAL_MODELS=${#LIGHTWEIGHT_MODELS[@]}
+    CURRENT=1
+    
+    for model in "${LIGHTWEIGHT_MODELS[@]}"; do
+        print_status "📦 [$CURRENT/$TOTAL_MODELS] Downloading: $model"
+        MODEL_NAME="$model"
+        download_model
+        echo ""
+        ((CURRENT++))
+    done
+    
+    print_success "✅ All lightweight models downloaded!"
+    print_status "Available models:"
+    print_status "  🏃 DialoGPT-medium     - Ultra-fast training (~20-30 min)"
+    print_status "  🦙 TinyLlama-1.1B      - Fast Llama architecture (~40-60 min)"
+    print_status "  ⚖️  Llama-3.2-1B       - Balanced performance (~60-90 min)"
+    
+elif [ "$DOWNLOAD_MODEL" = true ]; then
     download_model
 fi
 
@@ -410,6 +445,23 @@ total_size=$(du -sh . 2>/dev/null | cut -f1 || echo "Unknown")
 print_status "Current project size: $total_size"
 
 # Create download manifest
+if [ "$DOWNLOAD_ALL_MODELS" = true ]; then
+cat > download_manifest.json << EOF
+{
+    "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "dataset_downloaded": $DOWNLOAD_DATASET,
+    "models_downloaded": [
+        "microsoft/DialoGPT-medium",
+        "TinyLlama/TinyLlama-1.1B-Chat-v1.0", 
+        "meta-llama/Llama-3.2-1B-Instruct"
+    ],
+    "download_mode": "full",
+    "dataset_dir": "$OUTPUT_DIR",
+    "model_dir": "$MODEL_DIR",
+    "project_size": "$total_size"
+}
+EOF
+else
 cat > download_manifest.json << EOF
 {
     "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -421,6 +473,7 @@ cat > download_manifest.json << EOF
     "project_size": "$total_size"
 }
 EOF
+fi
 
 print_success "Download process completed!"
 print_status "Manifest saved to: download_manifest.json"
@@ -428,4 +481,14 @@ print_status ""
 print_status "Next steps:"
 echo "  1. Validate data:    python 00_check_data.py --data_root $OUTPUT_DIR"
 echo "  2. Prepare dataset:  python 01_prepare_dataset.py"
-echo "  3. Start training:   python 03_sft_train.py"
+if [ "$DOWNLOAD_ALL_MODELS" = true ]; then
+    echo "  3. Choose model and start training:"
+    echo "     # Ultra-fast (20-30 min):"
+    echo "     python 03_sft_train.py --config configs/models/dialogpt-medium.yaml"
+    echo "     # Fast Llama (40-60 min):"
+    echo "     python 03_sft_train.py --config configs/models/tinyllama-1.1b.yaml"
+    echo "     # Balanced (60-90 min):"
+    echo "     python 03_sft_train.py --config configs/models/llama-3.2-1b.yaml"
+else
+    echo "  3. Start training:   python 03_sft_train.py"
+fi
