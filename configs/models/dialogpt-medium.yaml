@@ -19,7 +19,7 @@ training:
   gradient_accumulation_steps: 2  # Reduced for longer context
   learning_rate: 5.0e-05  # Lower LR to prevent NaN loss
   warmup_steps: 100       # More warmup for stability
-  max_length: 1536        # Longer context for FinQA documents
+  max_length: 1024        # DialoGPT maximum position embeddings
   fp16: false             # Disable FP16 to prevent numerical issues
   bf16: true              # Use BF16 instead for better stability
   max_grad_norm: 1.0
