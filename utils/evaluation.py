@@ -203,14 +203,25 @@ class ModelEvaluator:
                         logger.warning(f"Reward calculation failed for example {idx}: {e}")
                         reward_total = 0
                 
-                # Check if valid JSON
+                # Check if valid JSON (extract from response)
                 parse_ok = False
                 try:
+                    # Try direct parsing first
                     json.loads(prediction)
                     parse_success += 1
                     parse_ok = True
-                except:
-                    pass
+                except json.JSONDecodeError:
+                    # Try to extract JSON from text (like in generate_candidates.py)
+                    if "{" in prediction and "}" in prediction:
+                        start = prediction.find("{")
+                        end = prediction.rfind("}") + 1
+                        if end > start:
+                            try:
+                                json.loads(prediction[start:end])
+                                parse_success += 1
+                                parse_ok = True
+                            except:
+                                pass
                 
                 # Store sample
                 sample_data = {
