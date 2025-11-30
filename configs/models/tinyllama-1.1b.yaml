@@ -26,9 +26,9 @@ training:
   bf16: true
   max_grad_norm: 1.0
 validation:
-  eval_steps: 800   # More frequent validation
-  save_steps: 800   # More frequent saves
-  logging_steps: 50
+  eval_steps: 2000  # Less frequent validation for speed
+  save_steps: 2000  # Less frequent saves for speed
+  logging_steps: 100
 generation:
   max_new_tokens: 96
   temperature: 0.8

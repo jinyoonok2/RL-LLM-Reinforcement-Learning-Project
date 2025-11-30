@@ -214,10 +214,27 @@ class FinQADataset(Dataset):
         return None
     
     def _build_prompt(self, example):
-        """Build instruction prompt from example."""
-        return (f"{example['input_text']}\n\n"
-                f"Question: {example.get('question', '')}\n\n"
-                f"Provide your answer in JSON format with 'answer' and 'program' fields:\n")
+        """Build instruction prompt with few-shot JSON examples."""
+        # Few-shot examples to teach JSON format
+        examples_text = '''You are a financial analyst. Read the context and answer questions with precise numerical answers in JSON format.
+
+Example 1:
+Context: Company revenue was $500 million in 2020 and $600 million in 2021.
+Question: What was the revenue growth from 2020 to 2021?
+Answer: {"answer": "100", "program": "subtract(600, 500)"}
+
+Example 2:
+Context: Total expenses were $250 million. Marketing was 20% of expenses.
+Question: How much was spent on marketing?
+Answer: {"answer": "50", "program": "multiply(250, 0.20)"}
+
+Now solve this problem:
+'''
+        
+        return (f"{examples_text}"
+                f"Context: {example['input_text']}\n"
+                f"Question: {example.get('question', '')}\n"
+                f"Answer: ")
     
     def __len__(self):
         return len(self.examples)
@@ -226,15 +243,19 @@ class FinQADataset(Dataset):
         ex = self.examples[idx]
         prompt = self._build_prompt(ex)
         
-        # Create target JSON
-        target = json.dumps({
-            'answer': ex['target_answer'],
-            'program': ex.get('target_program', [])
-        })
+        # Create target JSON with proper formatting
+        program = ex.get('target_program', '')
+        if isinstance(program, list):
+            program = program[0] if program else ''
         
-        # Debug: Check for problematic characters
-        if len(target) > 500:  # Very long target
-            target = target[:400] + '"}'  # Truncate long targets
+        target = json.dumps({
+            'answer': str(ex['target_answer']),
+            'program': str(program)
+        }, separators=(',', ':'))  # Compact JSON
+        
+        # Ensure target isn't too long
+        if len(target) > 200:  # Reasonable limit
+            target = json.dumps({"answer": str(ex['target_answer']), "program": ""}, separators=(',', ':'))
             
         # Clean text to avoid tokenization issues
         prompt = prompt.replace('\x00', '').replace('\ufffd', '')
