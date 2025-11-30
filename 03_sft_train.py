@@ -234,34 +234,66 @@ class FinQADataset(Dataset):
         
         # Debug: Check for problematic characters
         if len(target) > 500:  # Very long target
-            target = target[:400] + '..."}'  # Truncate long targets
+            target = target[:400] + '"}'  # Truncate long targets
+            
+        # Clean text to avoid tokenization issues
+        prompt = prompt.replace('\x00', '').replace('\ufffd', '')
+        target = target.replace('\x00', '').replace('\ufffd', '')
         
-        # Tokenize full sequence
+        # Tokenize full sequence with safety checks
         full_text = f"{prompt}{target}{self.tokenizer.eos_token}"
-        encodings = self.tokenizer(
-            full_text,
-            truncation=True,
-            max_length=self.max_length,
-            padding='max_length',
-            return_tensors='pt'
-        )
         
-        # Mask prompt tokens
-        prompt_tokens = self.tokenizer(prompt, truncation=True, max_length=self.max_length, return_tensors='pt')
-        prompt_len = min(prompt_tokens['input_ids'].shape[1], self.max_length)
+        try:
+            encodings = self.tokenizer(
+                full_text,
+                truncation=True,
+                max_length=self.max_length,
+                padding='max_length',
+                return_tensors='pt',
+                add_special_tokens=False  # DialoGPT specific
+            )
+        except Exception as e:
+            logger.warning(f"Tokenization failed for example {idx}: {e}")
+            # Fallback with simpler text
+            simple_text = f"Question: {ex.get('question', '')[:200]}\nAnswer: {ex['target_answer'][:100]}{self.tokenizer.eos_token}"
+            encodings = self.tokenizer(
+                simple_text,
+                truncation=True,
+                max_length=self.max_length,
+                padding='max_length',
+                return_tensors='pt',
+                add_special_tokens=False
+            )
+        
+        # Tokenize prompt separately for masking
+        try:
+            prompt_tokens = self.tokenizer(prompt, truncation=True, max_length=self.max_length, 
+                                         return_tensors='pt', add_special_tokens=False)
+            prompt_len = min(prompt_tokens['input_ids'].shape[1], self.max_length)
+        except:
+            prompt_len = len(prompt.split()) // 2  # Rough estimate fallback
         
         labels = encodings['input_ids'].clone()
         labels[0, :prompt_len] = -100  # Mask prompt
         labels[0, encodings['attention_mask'][0] == 0] = -100  # Mask padding
         
-        # Ensure no out-of-bounds token indices
-        vocab_size = self.tokenizer.vocab_size
-        if hasattr(self.tokenizer, 'get_vocab'):
-            vocab_size = len(self.tokenizer.get_vocab())
+        # Validate token IDs are within vocabulary bounds
+        vocab_size = getattr(self.tokenizer, 'vocab_size', 50257)  # DialoGPT default
         
-        # Clamp token IDs to valid range
-        encodings['input_ids'] = torch.clamp(encodings['input_ids'], 0, vocab_size - 1)
-        labels = torch.clamp(labels, -100, vocab_size - 1)
+        # Replace invalid tokens with pad token ID
+        pad_token_id = self.tokenizer.pad_token_id or 0
+        
+        input_ids = encodings['input_ids'][0]
+        invalid_mask = (input_ids >= vocab_size) | (input_ids < 0)
+        input_ids[invalid_mask] = pad_token_id
+        
+        # Same for labels, but preserve -100
+        labels_flat = labels[0]
+        invalid_mask_labels = (labels_flat >= vocab_size) & (labels_flat != -100)
+        labels_flat[invalid_mask_labels] = pad_token_id
+        
+        encodings['input_ids'][0] = input_ids
+        labels[0] = labels_flat
         
         return {
             'input_ids': encodings['input_ids'].squeeze(),
@@ -294,10 +326,17 @@ def setup_model(config: SFTConfig):
     if tokenizer.pad_token is None:
         if hasattr(tokenizer, 'eos_token') and tokenizer.eos_token is not None:
             tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.pad_token_id = tokenizer.eos_token_id
             logger.info(f"Set pad_token to eos_token: {tokenizer.eos_token}")
         else:
             tokenizer.add_special_tokens({'pad_token': '[PAD]'})
             logger.info("Added new pad_token: [PAD]")
+    
+    # Special handling for DialoGPT
+    if 'dialogpt' in config.base_model.lower():
+        # Ensure consistent tokenizer settings
+        tokenizer.padding_side = 'left'  # GPT-2 style
+        logger.info("Applied DialoGPT-specific tokenizer settings")
     
     # Determine dtype
     dtype = torch.bfloat16 if config.bf16 else (torch.float16 if config.fp16 else torch.float32)
@@ -351,6 +390,8 @@ def main():
                        help="Quick test with subset")
     parser.add_argument("--skip_validation", action="store_true",
                        help="Skip validation during training")
+    parser.add_argument("--test_tokenization", action="store_true",
+                       help="Test tokenization only, don't train")
     args = parser.parse_args()
     
     # Load config
@@ -398,6 +439,17 @@ def main():
         config.eval_steps = 50
     
     logger.info(f"✅ Training: {len(train_dataset)}, Validation: {len(val_dataset)}")
+    
+    # Test tokenization if requested
+    if args.test_tokenization:
+        logger.info("🧪 Testing tokenization on first 5 samples...")
+        for i in range(min(5, len(train_dataset))):
+            try:
+                sample = train_dataset[i]
+                logger.info(f"Sample {i}: input_ids shape={sample['input_ids'].shape}, max_id={sample['input_ids'].max()}")
+            except Exception as e:
+                logger.error(f"Sample {i} failed: {e}")
+        return 0
     
     # Load reward function
     try:
