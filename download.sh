@@ -39,22 +39,22 @@ show_help() {
     echo "  --token TOKEN        HuggingFace authentication token"
     echo "  --output-dir DIR     Dataset output directory (default: datasets/finqa)"
     echo "  --model-dir DIR      Model output directory (default: models)"
-    echo "  --full               Download all lightweight models (DialoGPT, TinyLlama, Llama-3.2-1B)"
+    echo "  --full               Download all reasoning models (Phi-3-Mini, Llama-3.2-1B)"
     echo "  --force              Force re-download even if files exist"
     echo "  --help               Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0                                            # Download dataset + Llama-3.2-1B (default)"
     echo "  $0 --model meta-llama/Meta-Llama-3-8B-Instruct  # Download 8B model instead"
-    echo "  $0 --full                                     # Download dataset + all lightweight models"
+    echo "  $0 --full                                     # Download dataset + all reasoning models"
     echo "  $0 --dataset-only                             # Only download FinQA dataset"
     echo "  $0 --model-only                               # Only download default model"
     echo "  $0 --force                                    # Re-download everything"
     echo ""
     echo "Popular Models:"
     echo "  meta-llama/Llama-3.2-1B-Instruct     # Default: Fast testing model (~2.5GB)"
+    echo "  microsoft/Phi-3-mini-4k-instruct     # Best reasoning for FinQA (~7.4GB)"
     echo "  meta-llama/Meta-Llama-3-8B-Instruct  # Production model (~15GB)"
-    echo "  mistralai/Mistral-7B-Instruct-v0.1   # Alternative 7B model"
 }
 
 # Parse command line arguments
@@ -409,11 +409,10 @@ if [ "$DOWNLOAD_ALL_MODELS" = true ]; then
     print_status "🚀 Downloading ALL lightweight models for maximum flexibility..."
     echo ""
     
-    # Define lightweight models
+    # Define lightweight models optimized for mathematical reasoning
     LIGHTWEIGHT_MODELS=(
-        "microsoft/DialoGPT-medium"                 # Ultra-fast (~863MB)
-        "TinyLlama/TinyLlama-1.1B-Chat-v1.0"      # Fast Llama (~2.2GB)
-        "meta-llama/Llama-3.2-1B-Instruct"        # Balanced (~2.5GB)
+        "microsoft/Phi-3-mini-4k-instruct"        # Best reasoning (~7.4GB)
+        "meta-llama/Llama-3.2-1B-Instruct"        # Fast Llama (~2.5GB)
     )
     
     TOTAL_MODELS=${#LIGHTWEIGHT_MODELS[@]}
@@ -451,8 +450,7 @@ cat > download_manifest.json << EOF
     "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
     "dataset_downloaded": $DOWNLOAD_DATASET,
     "models_downloaded": [
-        "microsoft/DialoGPT-medium",
-        "TinyLlama/TinyLlama-1.1B-Chat-v1.0", 
+        "microsoft/Phi-3-mini-4k-instruct",
         "meta-llama/Llama-3.2-1B-Instruct"
     ],
     "download_mode": "full",

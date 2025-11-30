@@ -214,21 +214,35 @@ class FinQADataset(Dataset):
         return None
     
     def _build_prompt(self, example):
-        """Build instruction prompt with few-shot JSON examples."""
-        # Few-shot examples to teach JSON format
-        examples_text = '''You are a financial analyst. Read the context and answer questions with precise numerical answers in JSON format.
+        """Build instruction prompt with realistic FinQA few-shot examples."""
+        # Realistic FinQA-style examples to teach proper mathematical reasoning
+        examples_text = '''You are a financial analyst. Read financial data carefully and calculate precise answers in JSON format.
 
 Example 1:
-Context: Company revenue was $500 million in 2020 and $600 million in 2021.
-Question: What was the revenue growth from 2020 to 2021?
-Answer: {"answer": "100", "program": "subtract(600, 500)"}
+Context: 
+Table:
+| year | revenue (millions) | expenses (millions) |
+| 2019 | 2457 | 1823 |
+| 2020 | 2156 | 1654 |
 
-Example 2:
-Context: Total expenses were $250 million. Marketing was 20% of expenses.
-Question: How much was spent on marketing?
-Answer: {"answer": "50", "program": "multiply(250, 0.20)"}
+Question: What was the percentage decrease in revenue from 2019 to 2020?
+Answer: {"answer": "12.25", "program": "divide(subtract(2457, 2156), 2457) * 100"}
 
-Now solve this problem:
+Example 2:  
+Context:
+The company's payment volume was $637 billion across 5.0 billion transactions in 2020.
+
+Question: What is the average payment volume per transaction?
+Answer: {"answer": "127.40", "program": "divide(637, 5.0)"}
+
+Example 3:
+Context:
+Total oil reserves: 450 million barrels. Canadian operations: 144 million barrels.
+
+Question: What percentage of total oil reserves comes from Canada?
+Answer: {"answer": "32.0", "program": "divide(144, 450) * 100"}
+
+Now solve this problem using the same approach:
 '''
         
         return (f"{examples_text}"
