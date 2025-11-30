@@ -137,13 +137,81 @@ class FinQADataset(Dataset):
     def _filter_examples(self, examples):
         """Filter out examples where prompt is too long."""
         valid = []
+        truncated_count = 0
+        
         for ex in examples:
             prompt = self._build_prompt(ex)
             tokens = self.tokenizer(prompt, truncation=True, max_length=self.max_length, return_tensors='pt')
-            # More lenient filtering - keep if prompt fits in 80% of max length
-            if tokens['input_ids'].shape[1] < int(self.max_length * 0.8):
+            prompt_length = tokens['input_ids'].shape[1]
+            
+            # Strategy 1: Keep if fits comfortably (80% of max_length)
+            if prompt_length < int(self.max_length * 0.8):
                 valid.append(ex)
+            # Strategy 2: Truncate long examples but keep them if they're reasonable
+            elif prompt_length < int(self.max_length * 0.95):  # Up to 95% is ok
+                # Truncate the input text but keep the example
+                truncated = self._truncate_example(ex)
+                if truncated:
+                    valid.append(truncated)
+                    truncated_count += 1
+                    
+        if truncated_count > 0:
+            logger.info(f"Truncated {truncated_count} long examples to fit context")
         return valid
+    
+    def _compress_financial_text(self, text):
+        """Compress financial text by keeping only essential numerical data."""
+        import re
+        
+        lines = text.split('\n')
+        compressed_lines = []
+        
+        # Patterns for important financial data
+        important_patterns = [
+            r'\$[\d,\.]+',                    # Dollar amounts
+            r'\d+\.?\d*\s*%',                 # Percentages  
+            r'\b20\d{2}\b',                   # Years (2000-2099)
+            r'\bQ[1-4]\b',                    # Quarters
+            r'\d+\.?\d*\s*(million|billion|thousand|M|B|K)', # Large numbers
+            r'\b(revenue|profit|income|expense|cost|sales|net|total)\b', # Key terms
+            r'\b(increase|decreased?|growth|decline|up|down)\b',         # Change indicators
+        ]
+        
+        for line in lines:
+            line = line.strip()
+            if not line or len(line) < 10:
+                continue
+                
+            # Keep lines with important patterns
+            if any(re.search(pattern, line, re.IGNORECASE) for pattern in important_patterns):
+                # Clean up the line (remove excessive spaces)
+                cleaned_line = re.sub(r'\s+', ' ', line)
+                compressed_lines.append(cleaned_line)
+                
+            # Stop if we have enough information
+            if len(compressed_lines) >= 12:
+                break
+        
+        return '\n'.join(compressed_lines)
+
+    def _truncate_example(self, example):
+        """Truncate long examples intelligently with financial data focus."""
+        original_input = example['input_text']
+        
+        # First try intelligent compression
+        compressed_input = self._compress_financial_text(original_input)
+        
+        # If still too long, use truncation
+        if len(compressed_input) > 800:
+            compressed_input = compressed_input[:400] + "\n[...]\n" + compressed_input[-300:]
+        
+        # Only proceed if we got meaningful compression
+        if len(compressed_input) < len(original_input) * 0.8:  # At least 20% reduction
+            truncated_ex = example.copy()
+            truncated_ex['input_text'] = compressed_input
+            return truncated_ex
+        
+        return None
     
     def _build_prompt(self, example):
         """Build instruction prompt from example."""

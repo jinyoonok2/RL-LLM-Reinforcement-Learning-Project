@@ -18,10 +18,10 @@ lora:
 training:
   epochs: 5  # Increased epochs
   batch_size: 4  # Increased batch size for 1B model
-  gradient_accumulation_steps: 4  # Effective batch size of 16
+  gradient_accumulation_steps: 2  # Reduced for longer context
   learning_rate: 8.0e-05  # Higher LR works well with LoRA
   warmup_steps: 200  # More warmup steps
-  max_length: 1024  # Reduced for faster training, covers most samples
+  max_length: 1536  # Increased for FinQA document coverage
   fp16: false
   bf16: true
   max_grad_norm: 1.0
