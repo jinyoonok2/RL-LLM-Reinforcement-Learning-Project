@@ -15,13 +15,13 @@ lora:
   - c_proj
 training:
   epochs: 5      # Can train more epochs quickly
-  batch_size: 16 # Much larger batches possible
-  gradient_accumulation_steps: 1  # No need for accumulation
-  learning_rate: 1.5e-04  # Higher LR for GPT-2
-  warmup_steps: 50
-  max_length: 512         # Shorter for speed
-  fp16: true              # FP16 works well with GPT-2
-  bf16: false
+  batch_size: 4  # Smaller batch size for stability
+  gradient_accumulation_steps: 4  # Effective batch size of 16
+  learning_rate: 5.0e-05  # Lower LR to prevent NaN loss
+  warmup_steps: 100       # More warmup for stability
+  max_length: 1024        # Longer context for better data retention
+  fp16: false             # Disable FP16 to prevent numerical issues
+  bf16: true              # Use BF16 instead for better stability
   max_grad_norm: 1.0
 validation:
   eval_steps: 400   # Very frequent validation

@@ -17,9 +17,9 @@ training:
   epochs: 3      # Fewer epochs but faster iterations
   batch_size: 8  # Larger batches for speed
   gradient_accumulation_steps: 2  # Effective batch size of 16
-  learning_rate: 1.0e-04  # Higher LR for faster convergence
-  warmup_steps: 50        # Shorter warmup
-  max_length: 512         # Shorter sequences for speed
+  learning_rate: 3.0e-05  # Stable LR for ultra-fast mode
+  warmup_steps: 100       # More warmup for stability
+  max_length: 1024        # Longer for better data retention
   fp16: false
   bf16: true
   max_grad_norm: 1.0

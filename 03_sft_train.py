@@ -140,7 +140,8 @@ class FinQADataset(Dataset):
         for ex in examples:
             prompt = self._build_prompt(ex)
             tokens = self.tokenizer(prompt, truncation=True, max_length=self.max_length, return_tensors='pt')
-            if tokens['input_ids'].shape[1] < self.max_length - 50:  # Need room for answer
+            # More lenient filtering - keep if prompt fits in 80% of max length
+            if tokens['input_ids'].shape[1] < int(self.max_length * 0.8):
                 valid.append(ex)
         return valid
     

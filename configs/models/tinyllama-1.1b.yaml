@@ -19,8 +19,8 @@ training:
   epochs: 4      # More epochs for smaller model
   batch_size: 8  # Can handle larger batches
   gradient_accumulation_steps: 2  # Effective batch size of 16
-  learning_rate: 1.0e-04  # Higher LR for faster convergence
-  warmup_steps: 100
+  learning_rate: 5.0e-05  # Stable LR to prevent NaN
+  warmup_steps: 150       # More warmup for stability
   max_length: 1024       # Good balance
   fp16: false
   bf16: true
