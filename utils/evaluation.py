@@ -223,6 +223,14 @@ class ModelEvaluator:
                             except:
                                 pass
                 
+                # Debug: Print first few samples to understand output format
+                if idx < 3:  # Only first 3 samples
+                    logger.info(f"DEBUG Sample {idx}:")
+                    logger.info(f"  Question: {question[:100]}...")
+                    logger.info(f"  Generated: {prediction[:200]}...")
+                    logger.info(f"  Parse OK: {parse_ok}")
+                    logger.info(f"  Reward: {reward_total}")
+                
                 # Store sample
                 sample_data = {
                     'example_id': example.get('example_id', f'sample_{idx}'),
