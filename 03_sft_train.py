@@ -232,6 +232,10 @@ class FinQADataset(Dataset):
             'program': ex.get('target_program', [])
         })
         
+        # Debug: Check for problematic characters
+        if len(target) > 500:  # Very long target
+            target = target[:400] + '..."}'  # Truncate long targets
+        
         # Tokenize full sequence
         full_text = f"{prompt}{target}{self.tokenizer.eos_token}"
         encodings = self.tokenizer(
@@ -244,11 +248,20 @@ class FinQADataset(Dataset):
         
         # Mask prompt tokens
         prompt_tokens = self.tokenizer(prompt, truncation=True, max_length=self.max_length, return_tensors='pt')
-        prompt_len = prompt_tokens['input_ids'].shape[1]
+        prompt_len = min(prompt_tokens['input_ids'].shape[1], self.max_length)
         
         labels = encodings['input_ids'].clone()
         labels[0, :prompt_len] = -100  # Mask prompt
         labels[0, encodings['attention_mask'][0] == 0] = -100  # Mask padding
+        
+        # Ensure no out-of-bounds token indices
+        vocab_size = self.tokenizer.vocab_size
+        if hasattr(self.tokenizer, 'get_vocab'):
+            vocab_size = len(self.tokenizer.get_vocab())
+        
+        # Clamp token IDs to valid range
+        encodings['input_ids'] = torch.clamp(encodings['input_ids'], 0, vocab_size - 1)
+        labels = torch.clamp(labels, -100, vocab_size - 1)
         
         return {
             'input_ids': encodings['input_ids'].squeeze(),
@@ -291,6 +304,11 @@ def setup_model(config: SFTConfig):
     logger.info(f"Using {dtype} for training")
     
     model = AutoModelForCausalLM.from_pretrained(config.base_model, torch_dtype=dtype)
+    
+    # Resize token embeddings if we added new tokens
+    if len(tokenizer) > model.config.vocab_size:
+        logger.info(f"Resizing token embeddings: {model.config.vocab_size} -> {len(tokenizer)}")
+        model.resize_token_embeddings(len(tokenizer))
     
     # Apply LoRA
     if config.use_lora:
