@@ -214,38 +214,16 @@ class FinQADataset(Dataset):
         return None
     
     def _build_prompt(self, example):
-        """Build instruction prompt with realistic FinQA few-shot examples."""
-        # Realistic FinQA-style examples to teach proper mathematical reasoning
-        examples_text = '''You are a financial analyst. Read financial data carefully and calculate precise answers in JSON format.
+        """Build efficient instruction prompt for Phi3-Mini."""
+        # Shorter, more efficient prompt to save memory and improve data retention
+        instruction = '''Answer financial questions with precise calculations in JSON format.
 
-Example 1:
-Context: 
-Table:
-| year | revenue (millions) | expenses (millions) |
-| 2019 | 2457 | 1823 |
-| 2020 | 2156 | 1654 |
-
-Question: What was the percentage decrease in revenue from 2019 to 2020?
-Answer: {"answer": "12.25", "program": "divide(subtract(2457, 2156), 2457) * 100"}
-
-Example 2:  
-Context:
-The company's payment volume was $637 billion across 5.0 billion transactions in 2020.
-
-Question: What is the average payment volume per transaction?
+Example: Revenue $637B, transactions 5.0B → average per transaction?
 Answer: {"answer": "127.40", "program": "divide(637, 5.0)"}
 
-Example 3:
-Context:
-Total oil reserves: 450 million barrels. Canadian operations: 144 million barrels.
-
-Question: What percentage of total oil reserves comes from Canada?
-Answer: {"answer": "32.0", "program": "divide(144, 450) * 100"}
-
-Now solve this problem using the same approach:
 '''
         
-        return (f"{examples_text}"
+        return (f"{instruction}"
                 f"Context: {example['input_text']}\n"
                 f"Question: {example.get('question', '')}\n"
                 f"Answer: ")
