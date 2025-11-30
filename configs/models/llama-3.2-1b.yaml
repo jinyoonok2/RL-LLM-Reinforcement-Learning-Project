@@ -7,14 +7,17 @@ model:
   vocab_size: 128256
 lora:
   use_lora: true
-  r: 16          # Rank 16 = ~262M trainable params (22% of model)
-  alpha: 32      # Adjusted scaling (2x rank)
-  dropout: 0.1   # Slightly higher dropout for better generalization
+  r: 64          # Much higher rank for more trainable params (~1B params, 50%+ of model)
+  alpha: 128     # Higher alpha for stronger adaptation (2x rank)
+  dropout: 0.05  # Lower dropout for stronger learning
   target_modules:
-  - q_proj
-  - v_proj
-  - k_proj
-  - o_proj
+  - q_proj      # Query projection
+  - v_proj      # Value projection  
+  - k_proj      # Key projection
+  - o_proj      # Output projection
+  - gate_proj   # MLP gate projection
+  - up_proj     # MLP up projection
+  - down_proj   # MLP down projection
 training:
   epochs: 5  # Increased epochs
   batch_size: 4  # Increased batch size for 1B model
