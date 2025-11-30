@@ -7,8 +7,8 @@ model:
   vocab_size: 128256
 lora:
   use_lora: true
-  r: 64          # Much higher rank for more trainable params (~1B params, 50%+ of model)
-  alpha: 128     # Higher alpha for stronger adaptation (2x rank)
+  r: 32          # Balanced rank for good learning + memory efficiency
+  alpha: 64      # 2x rank scaling
   dropout: 0.05  # Lower dropout for stronger learning
   target_modules:
   - q_proj      # Query projection
@@ -20,8 +20,8 @@ lora:
   - down_proj   # MLP down projection
 training:
   epochs: 5  # Increased epochs
-  batch_size: 4  # Increased batch size for 1B model
-  gradient_accumulation_steps: 2  # Reduced for longer context
+  batch_size: 2  # Reduced for memory efficiency with LoRA rank 32
+  gradient_accumulation_steps: 4  # Increased to maintain effective batch size
   learning_rate: 8.0e-05  # Higher LR works well with LoRA
   warmup_steps: 200  # More warmup steps
   max_length: 1536  # Increased for FinQA document coverage
