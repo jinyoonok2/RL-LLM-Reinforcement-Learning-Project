@@ -60,8 +60,16 @@ class SFTTrainer:
         self.collate_fn = collate_fn
         self.device = torch.device(config.device)
         
-        # Move model to device
-        self.model.to(self.device)
+        # Check if model is already distributed across devices
+        self.is_distributed = hasattr(model, 'hf_device_map') and model.hf_device_map is not None
+        
+        # Move model to device only if not distributed
+        if not self.is_distributed:
+            self.model.to(self.device)
+        else:
+            # For distributed models, get the device of the first parameter
+            self.device = next(model.parameters()).device
+            logger.info(f"Model is distributed, using device {self.device} for data tensors")
         
         # Create output directories
         self.output_dir = Path(config.output_dir)
