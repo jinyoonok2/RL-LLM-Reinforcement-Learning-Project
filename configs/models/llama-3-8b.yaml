@@ -7,8 +7,8 @@ model:
   vocab_size: 128256
 lora:
   use_lora: true
-  r: 16           # Conservative for 8B model
-  alpha: 32
+  r: 32          # Matched to 1B for strong learning
+  alpha: 64      # 2x rank scaling (same as 1B)
   dropout: 0.05
   target_modules:
   - q_proj
@@ -19,19 +19,19 @@ lora:
   - up_proj
   - down_proj
 training:
-  epochs: 3       # Fewer epochs for larger model
-  batch_size: 1   # Memory conservative
-  gradient_accumulation_steps: 8
-  learning_rate: 5.0e-05  # Lower LR for stability
-  warmup_steps: 100
+  epochs: 5      # Matched to 1B for thorough training
+  batch_size: 1  # Memory conservative for 8B model
+  gradient_accumulation_steps: 8  # Effective batch = 8 (vs 1B's 8)
+  learning_rate: 8.0e-05  # Higher LR like 1B (works well with LoRA)
+  warmup_steps: 200  # More warmup like 1B
   max_length: 1536        # Proven length from 1B model
   fp16: false
   bf16: true
   max_grad_norm: 1.0
 validation:
-  eval_steps: 800
-  save_steps: 800
-  logging_steps: 50
+  eval_steps: 685   # Validate each epoch (5477 samples / 8 grad_accum)
+  save_steps: 685   # Save each epoch
+  logging_steps: 100
 generation:
   max_new_tokens: 128
   temperature: 0.7
