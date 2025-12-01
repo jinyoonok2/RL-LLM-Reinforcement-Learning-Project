@@ -7,8 +7,8 @@ model:
   vocab_size: 128256
 lora:
   use_lora: true
-  r: 32          # Matched to 1B for strong learning
-  alpha: 64      # 2x rank scaling (same as 1B)
+  r: 16          # Reduced for 24GB GPU memory
+  alpha: 32      # 2x rank scaling
   dropout: 0.05
   target_modules:
   - q_proj
@@ -21,7 +21,7 @@ lora:
 training:
   epochs: 5      # Matched to 1B for thorough training
   batch_size: 1  # Memory conservative for 8B model
-  gradient_accumulation_steps: 8  # Effective batch = 8 (vs 1B's 8)
+  gradient_accumulation_steps: 16  # Higher to reduce memory (effective batch = 16)
   learning_rate: 8.0e-05  # Higher LR like 1B (works well with LoRA)
   warmup_steps: 200  # More warmup like 1B
   max_length: 1536        # Proven length from 1B model
@@ -29,9 +29,9 @@ training:
   bf16: true
   max_grad_norm: 1.0
 validation:
-  eval_steps: 685   # Validate each epoch (5477 samples / 8 grad_accum)
-  save_steps: 685   # Save each epoch
-  logging_steps: 100
+  eval_steps: 342   # Validate each epoch (5477 samples / 16 grad_accum)
+  save_steps: 342   # Save each epoch
+  logging_steps: 50
 generation:
   max_new_tokens: 128
   temperature: 0.7
