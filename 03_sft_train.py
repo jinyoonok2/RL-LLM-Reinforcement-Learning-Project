@@ -215,11 +215,17 @@ class FinQADataset(Dataset):
     
     def _build_prompt(self, example):
         """Build efficient instruction prompt for Phi3-Mini."""
-        # Shorter, more efficient prompt to save memory and improve data retention
+        # Realistic FinQA mathematical examples with step-by-step financial reasoning
         instruction = '''Answer financial questions with precise calculations in JSON format.
 
-Example: Revenue $637B, transactions 5.0B → average per transaction?
-Answer: {"answer": "127.40", "program": "divide(637, 5.0)"}
+Example 1: Revenue 2019: $2,457M, Revenue 2020: $2,156M. Percentage decrease?
+Answer: {"answer": "12.25", "program": "divide(subtract(2457, 2156), 2457) * 100"}
+
+Example 2: Cash flow 2015: $850M, Cash flow 2016: $1,012M. Percentage increase?
+Answer: {"answer": "19.06", "program": "divide(subtract(1012, 850), 850) * 100"}
+
+Example 3: If profit margin is 4.74%, what is the margin?
+Answer: {"answer": "4.74", "program": "const_4.74"}
 
 '''
         
