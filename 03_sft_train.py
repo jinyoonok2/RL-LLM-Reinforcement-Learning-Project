@@ -437,8 +437,8 @@ def main():
     model, tokenizer = setup_model(config)
     
     # Load datasets
-    train_dataset = FinQADataset(train_file, tokenizer, config.max_length, config.model_name)
-    val_dataset = FinQADataset(val_file, tokenizer, config.max_length, config.model_name)
+    train_dataset = FinQADataset(train_file, tokenizer, config.max_length, config.base_model)
+    val_dataset = FinQADataset(val_file, tokenizer, config.max_length, config.base_model)
     
     # Quick test mode
     if args.quick_test:
