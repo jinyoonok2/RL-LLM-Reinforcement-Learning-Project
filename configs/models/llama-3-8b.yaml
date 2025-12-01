@@ -1,13 +1,13 @@
 model:
-  name: meta-llama/Llama-3.2-3B-Instruct
+  name: meta-llama/Meta-Llama-3-8B-Instruct
   type: llama
   architecture: LlamaForCausalLM
-  hidden_size: 3072
-  num_layers: 28
+  hidden_size: 4096
+  num_layers: 32
   vocab_size: 128256
 lora:
   use_lora: true
-  r: 16           # Balanced for 8B model
+  r: 16           # Conservative for 8B model
   alpha: 32
   dropout: 0.05
   target_modules:
@@ -38,7 +38,7 @@ generation:
   top_p: 0.9
 paths:
   data_dir: datasets/finqa_processed
-  output_dir: outputs/run_001/03_sft_llama3b
+  output_dir: outputs/run_001/03_sft_llama8b
   reward_spec: outputs/run_001/02_rewards/reward_spec.yaml
 metadata:
-  description: Llama-3.2-3B - 3x larger than 1B, ungated access, better mathematical reasoning
+  description: Llama-3-8B-Instruct - 8B params, gated model with approved access, superior mathematical reasoning
