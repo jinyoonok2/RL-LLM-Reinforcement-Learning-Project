@@ -7,8 +7,8 @@ model:
   vocab_size: 32064
 lora:
   use_lora: true
-  r: 8           # Reduced rank for memory efficiency
-  alpha: 16
+  r: 16          # Increased rank for better learning capacity
+  alpha: 32
   dropout: 0.05
   target_modules:
   - qkv_proj     # Phi-3 uses combined QKV projection
@@ -22,7 +22,7 @@ training:
   gradient_accumulation_steps: 8  # Maintain effective batch size
   learning_rate: 8.0e-05
   warmup_steps: 150
-  max_length: 1536       # Same as successful Llama config for good data retention
+  max_length: 2048       # Increased for better Phi-3 data retention
   fp16: false
   bf16: true
   max_grad_norm: 1.0
