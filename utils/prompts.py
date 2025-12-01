@@ -16,6 +16,7 @@ class PromptLoader:
     def __init__(self, prompts_dir: str = "configs/prompts"):
         self.prompts_dir = Path(prompts_dir)
         self._templates = {}
+        self._model_template_cache = {}  # Cache model -> template mapping
         self._load_templates()
     
     def _load_templates(self):
@@ -38,6 +39,10 @@ class PromptLoader:
     
     def get_template_for_model(self, model_name: str) -> Dict[str, Any]:
         """Get appropriate prompt template for model."""
+        # Check cache first
+        if model_name in self._model_template_cache:
+            return self._model_template_cache[model_name]
+        
         model_name_lower = model_name.lower()
         
         # Find compatible template
@@ -46,12 +51,15 @@ class PromptLoader:
             for model_pattern in compatible_models:
                 if model_pattern.lower() in model_name_lower:
                     logger.info(f"Using prompt template '{template_name}' for model '{model_name}'")
+                    self._model_template_cache[model_name] = template_data
                     return template_data
         
         # Default fallback to llama template
         if 'llama' in self._templates:
             logger.warning(f"No specific template for '{model_name}', using llama default")
-            return self._templates['llama']
+            template_data = self._templates['llama']
+            self._model_template_cache[model_name] = template_data
+            return template_data
         
         raise ValueError(f"No compatible prompt template found for model: {model_name}")
     
