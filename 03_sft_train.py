@@ -113,9 +113,10 @@ class SFTConfig:
 class FinQADataset(Dataset):
     """Simplified FinQA dataset with automatic prompt filtering."""
     
-    def __init__(self, data_file: Path, tokenizer, max_length: int = 2048):
+    def __init__(self, data_file: Path, tokenizer, max_length: int = 2048, model_name: str = ""):
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.model_name = model_name
         
         # Ensure pad token exists (same logic as setup_model)
         if tokenizer.pad_token is None:
@@ -214,25 +215,15 @@ class FinQADataset(Dataset):
         return None
     
     def _build_prompt(self, example):
-        """Build Phi-3-specific instruction prompt with strict JSON enforcement."""
-        # Use Phi-3's preferred system/user format for better instruction following
-        system_msg = """You are a financial analyst. Answer questions using ONLY the provided context. 
-Your response MUST be valid JSON in this exact format: {"answer": "numerical_value", "program": "calculation_steps"}
-
-Examples:
-- Revenue decreased from $2,457M to $2,156M: {"answer": "12.25", "program": "divide(subtract(2457, 2156), 2457) * 100"}
-- Cash flow increased from $850M to $1,012M: {"answer": "19.06", "program": "divide(subtract(1012, 850), 850) * 100"}
-- Given profit margin 4.74%: {"answer": "4.74", "program": "const_4.74"}
-
-CRITICAL: Respond with ONLY valid JSON. No explanations, no additional text."""
+        """Build model-specific prompt using external template files."""
+        from utils.prompts import get_prompt_loader
         
-        user_msg = f"""Context: {example['input_text']}
-
-Question: {example.get('question', '')}
-
-JSON Response:"""
-        
-        return f"<|system|>\n{system_msg}<|end|>\n<|user|>\n{user_msg}<|end|>\n<|assistant|>\n"
+        prompt_loader = get_prompt_loader()
+        return prompt_loader.format_prompt(
+            model_name=self.model_name,
+            context=example['input_text'],
+            question=example.get('question', '')
+        )
     
     def __len__(self):
         return len(self.examples)
@@ -446,8 +437,8 @@ def main():
     model, tokenizer = setup_model(config)
     
     # Load datasets
-    train_dataset = FinQADataset(train_file, tokenizer, config.max_length)
-    val_dataset = FinQADataset(val_file, tokenizer, config.max_length)
+    train_dataset = FinQADataset(train_file, tokenizer, config.max_length, config.model_name)
+    val_dataset = FinQADataset(val_file, tokenizer, config.max_length, config.model_name)
     
     # Quick test mode
     if args.quick_test:
