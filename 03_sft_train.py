@@ -352,7 +352,18 @@ def setup_model(config: SFTConfig):
     dtype = torch.bfloat16 if config.bf16 else (torch.float16 if config.fp16 else torch.float32)
     logger.info(f"Using {dtype} for training")
     
-    model = AutoModelForCausalLM.from_pretrained(config.base_model, torch_dtype=dtype)
+    # Check for multi-GPU
+    num_gpus = torch.cuda.device_count()
+    if num_gpus > 1:
+        logger.info(f"🚀 Multi-GPU detected: {num_gpus} GPUs available")
+        logger.info("Using device_map='auto' to distribute model across all GPUs")
+        model = AutoModelForCausalLM.from_pretrained(
+            config.base_model, 
+            torch_dtype=dtype,
+            device_map="auto"  # Automatically distribute across GPUs
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(config.base_model, torch_dtype=dtype)
     
     # Resize token embeddings if we added new tokens
     if len(tokenizer) > model.config.vocab_size:
@@ -384,8 +395,12 @@ def setup_model(config: SFTConfig):
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
     
-    model = model.to(config.device)
-    logger.info(f"Model moved to {config.device}")
+    # Only move to device if not using device_map
+    if not (num_gpus > 1):
+        model = model.to(config.device)
+        logger.info(f"Model moved to {config.device}")
+    else:
+        logger.info(f"Model distributed across {num_gpus} GPUs")
     
     return model, tokenizer
 
