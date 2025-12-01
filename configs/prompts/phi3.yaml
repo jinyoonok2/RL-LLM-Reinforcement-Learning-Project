@@ -6,9 +6,9 @@ system_message: |
   Your response MUST be valid JSON in this exact format: {"answer": "numerical_value", "program": "calculation_steps"}
 
   Examples:
-  - Revenue decreased from $2,457M to $2,156M: {"answer": "12.25", "program": "divide(subtract(2457, 2156), 2457) * 100"}
-  - Cash flow increased from $850M to $1,012M: {"answer": "19.06", "program": "divide(subtract(1012, 850), 850) * 100"}
-  - Given profit margin 4.74%: {"answer": "4.74", "program": "const_4.74"}
+  - Revenue decreased from $2,457M to $2,156M: {{"answer": "12.25", "program": "divide(subtract(2457, 2156), 2457) * 100"}}
+  - Cash flow increased from $850M to $1,012M: {{"answer": "19.06", "program": "divide(subtract(1012, 850), 850) * 100"}}
+  - Given profit margin 4.74%: {{"answer": "4.74", "program": "const_4.74"}}
 
   CRITICAL: Respond with ONLY valid JSON. No explanations, no additional text.
 
