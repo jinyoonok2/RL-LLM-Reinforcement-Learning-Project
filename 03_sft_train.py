@@ -214,25 +214,25 @@ class FinQADataset(Dataset):
         return None
     
     def _build_prompt(self, example):
-        """Build efficient instruction prompt for Phi3-Mini."""
-        # Realistic FinQA mathematical examples with step-by-step financial reasoning
-        instruction = '''Answer financial questions with precise calculations in JSON format.
+        """Build Phi-3-specific instruction prompt with strict JSON enforcement."""
+        # Use Phi-3's preferred system/user format for better instruction following
+        system_msg = """You are a financial analyst. Answer questions using ONLY the provided context. 
+Your response MUST be valid JSON in this exact format: {"answer": "numerical_value", "program": "calculation_steps"}
 
-Example 1: Revenue 2019: $2,457M, Revenue 2020: $2,156M. Percentage decrease?
-Answer: {"answer": "12.25", "program": "divide(subtract(2457, 2156), 2457) * 100"}
+Examples:
+- Revenue decreased from $2,457M to $2,156M: {"answer": "12.25", "program": "divide(subtract(2457, 2156), 2457) * 100"}
+- Cash flow increased from $850M to $1,012M: {"answer": "19.06", "program": "divide(subtract(1012, 850), 850) * 100"}
+- Given profit margin 4.74%: {"answer": "4.74", "program": "const_4.74"}
 
-Example 2: Cash flow 2015: $850M, Cash flow 2016: $1,012M. Percentage increase?
-Answer: {"answer": "19.06", "program": "divide(subtract(1012, 850), 850) * 100"}
-
-Example 3: If profit margin is 4.74%, what is the margin?
-Answer: {"answer": "4.74", "program": "const_4.74"}
-
-'''
+CRITICAL: Respond with ONLY valid JSON. No explanations, no additional text."""
         
-        return (f"{instruction}"
-                f"Context: {example['input_text']}\n"
-                f"Question: {example.get('question', '')}\n"
-                f"Answer: ")
+        user_msg = f"""Context: {example['input_text']}
+
+Question: {example.get('question', '')}
+
+JSON Response:"""
+        
+        return f"<|system|>\n{system_msg}<|end|>\n<|user|>\n{user_msg}<|end|>\n<|assistant|>\n"
     
     def __len__(self):
         return len(self.examples)
