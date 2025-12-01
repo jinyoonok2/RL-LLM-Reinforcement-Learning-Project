@@ -22,7 +22,7 @@ training:
   gradient_accumulation_steps: 8  # Maintain effective batch size
   learning_rate: 8.0e-05
   warmup_steps: 150
-  max_length: 768        # Shorter context for memory and data retention
+  max_length: 1536       # Same as successful Llama config for good data retention
   fp16: false
   bf16: true
   max_grad_norm: 1.0
