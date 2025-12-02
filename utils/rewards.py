@@ -27,9 +27,15 @@ class RewardComponents:
 class FinQARewardCalculator:
     """Unified reward calculator for FinQA - handles both ternary and component-based rewards."""
     
-    def __init__(self, numerical_tolerance: float = 0.10, percentage_tolerance: float = 0.05):
+    def __init__(self, numerical_tolerance: float = 0.10, percentage_tolerance: float = 0.05, weights: Dict[str, float] = None):
         self.numerical_tolerance = numerical_tolerance  # Increased from 0.05 to 0.10
         self.percentage_tolerance = percentage_tolerance  # Increased from 0.02 to 0.05
+        self.weights = weights or {
+            'exact_match': 1.0,
+            'numerical_close': 0.9,
+            'program_valid': 0.5,
+            'format_valid': 0.3
+        }
         
     def normalize_answer(self, answer: str) -> str:
         """Normalize answer for comparison."""
