@@ -21,7 +21,7 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 DOWNLOAD_DATASET=true
 DOWNLOAD_MODEL=true
 DOWNLOAD_ALL_MODELS=false
-MODEL_NAME="meta-llama/Llama-3.2-1B-Instruct"  # Default: Fast 1B model for testing
+MODEL_NAME="meta-llama/Meta-Llama-3-8B-Instruct"  # Default: 8B model for production
 OUTPUT_DIR="datasets/finqa"
 MODEL_DIR="models"
 HF_TOKEN=""
@@ -44,8 +44,8 @@ show_help() {
     echo "  --help               Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                                            # Download dataset + Llama-3.2-1B (default)"
-    echo "  $0 --model meta-llama/Meta-Llama-3-8B-Instruct  # Download 8B model instead"
+    echo "  $0                                            # Download dataset + Llama-3-8B (default)"
+    echo "  $0 --model meta-llama/Llama-3.2-1B-Instruct  # Download 1B model instead"
     echo "  $0 --full                                     # Download dataset + all reasoning models"
     echo "  $0 --dataset-only                             # Only download FinQA dataset"
     echo "  $0 --model-only                               # Only download default model"
