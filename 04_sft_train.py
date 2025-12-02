@@ -150,6 +150,10 @@ class CandidateRankingModel(nn.Module):
         batch_indices = torch.arange(last_hidden.size(0), device=last_hidden.device)
         pooled = last_hidden[batch_indices, sequence_lengths]
         
+        # Move pooled to score_head's device if different (for multi-GPU)
+        if pooled.device != next(self.score_head.parameters()).device:
+            pooled = pooled.to(next(self.score_head.parameters()).device)
+        
         # Score each candidate
         # Shape: [batch_size * num_candidates, 1]
         scores = self.score_head(pooled)
