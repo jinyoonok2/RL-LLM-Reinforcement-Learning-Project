@@ -331,9 +331,16 @@ def setup_model(config: SFTConfig, num_candidates: int = 8):
         model = model.to(config.device)
         logger.info(f"Model moved to {config.device}")
     else:
-        # Move just the score_head to first GPU (base_model already distributed)
-        model.score_head = model.score_head.to('cuda:0')
-        logger.info(f"Model distributed across {num_gpus} GPUs")
+        # When using device_map, score_head needs to be on the same device as base_model's output
+        # The base model outputs from its last layer, so find the last device
+        if hasattr(base_model, 'hf_device_map'):
+            # Get the device of the last layer (where output comes from)
+            last_device = list(base_model.hf_device_map.values())[-1]
+            model.score_head = model.score_head.to(last_device)
+            logger.info(f"Model distributed across {num_gpus} GPUs, score_head on {last_device}")
+        else:
+            model.score_head = model.score_head.to('cuda:0')
+            logger.info(f"Model distributed across {num_gpus} GPUs")
     
     return model, tokenizer
 
