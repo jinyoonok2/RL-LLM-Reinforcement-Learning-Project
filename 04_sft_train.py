@@ -377,6 +377,10 @@ def train_epoch(model, dataloader, optimizer, scheduler, config: SFTConfig, epoc
         # Forward pass
         scores = model(input_ids, attention_mask)  # [batch_size, num_candidates]
         
+        # Move labels to same device as scores for loss calculation
+        if labels.device != scores.device:
+            labels = labels.to(scores.device)
+        
         # Loss: cross-entropy to select best candidate
         loss = F.cross_entropy(scores, labels)
         
@@ -432,6 +436,12 @@ def validate(model, dataloader, config):
             rewards = batch['rewards'].to(first_device)
             
             scores = model(input_ids, attention_mask)
+            
+            # Move labels and rewards to same device as scores
+            if labels.device != scores.device:
+                labels = labels.to(scores.device)
+                rewards = rewards.to(scores.device)
+            
             loss = F.cross_entropy(scores, labels)
             
             total_loss += loss.item()
