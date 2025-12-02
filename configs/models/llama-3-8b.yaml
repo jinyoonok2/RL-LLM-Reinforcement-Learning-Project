@@ -7,31 +7,28 @@ model:
   vocab_size: 128256
 lora:
   use_lora: true
-  r: 32          # Restored for multi-GPU (4x RTX 4090)
-  alpha: 64      # 2x rank scaling for strong learning
+  r: 16          # Smaller rank for faster training
+  alpha: 32      # Maintain 2x scaling
   dropout: 0.05
-  target_modules:
+  target_modules:  # Fewer modules for speed
   - q_proj
   - v_proj
-  - k_proj
   - o_proj
   - gate_proj
-  - up_proj
-  - down_proj
 training:
-  epochs: 5      # Matched to 1B for thorough training
-  batch_size: 1  # Memory conservative
-  gradient_accumulation_steps: 8  # Effective batch = 8 with multi-GPU
-  learning_rate: 8.0e-05  # Higher LR like 1B (works well with LoRA)
-  warmup_steps: 200  # More warmup like 1B
-  max_length: 512        # Reduced for classification (shorter inputs needed)
+  epochs: 3      # Fewer epochs for faster training
+  batch_size: 4  # Larger batch size for speed boost
+  gradient_accumulation_steps: 2  # Maintain effective batch=8
+  learning_rate: 1.0e-04  # Higher LR for faster convergence
+  warmup_steps: 100  # Less warmup
+  max_length: 256        # Much shorter sequences (FinQA answers are short)
   fp16: false
   bf16: true
   max_grad_norm: 1.0
 validation:
-  eval_steps: 685   # Validate each epoch (5477 / 8 grad_accum)
-  save_steps: 685   # Save each epoch
-  logging_steps: 100
+  eval_steps: 1563   # After each epoch (6251/4 = ~1563 steps)
+  save_steps: 1563   # Save after each epoch
+  logging_steps: 200  # Regular logging
 generation:
   max_new_tokens: 128
   temperature: 0.7
