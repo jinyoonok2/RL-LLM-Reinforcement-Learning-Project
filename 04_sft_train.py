@@ -119,12 +119,15 @@ class CandidateRankingModel(nn.Module):
         self.num_candidates = num_candidates
         self.hidden_size = base_model.config.hidden_size
         
+        # Get dtype from base_model
+        dtype = next(base_model.parameters()).dtype
+        
         # Scoring head: maps pooled representation to scalar score
         self.score_head = nn.Sequential(
-            nn.Linear(self.hidden_size, self.hidden_size // 2),
+            nn.Linear(self.hidden_size, self.hidden_size // 2, dtype=dtype),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(self.hidden_size // 2, 1)
+            nn.Linear(self.hidden_size // 2, 1, dtype=dtype)
         )
     
     def forward(self, input_ids, attention_mask):
