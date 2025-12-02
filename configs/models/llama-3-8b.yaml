@@ -24,7 +24,7 @@ training:
   gradient_accumulation_steps: 8  # Effective batch = 8 with multi-GPU
   learning_rate: 8.0e-05  # Higher LR like 1B (works well with LoRA)
   warmup_steps: 200  # More warmup like 1B
-  max_length: 1536        # Proven length from 1B model
+  max_length: 512        # Reduced for classification (shorter inputs needed)
   fp16: false
   bf16: true
   max_grad_norm: 1.0
