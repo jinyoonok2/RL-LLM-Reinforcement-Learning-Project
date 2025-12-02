@@ -338,20 +338,27 @@ def setup_model(config: SFTConfig, num_candidates: int = 8):
     return model, tokenizer
 
 
-def train_epoch(model, dataloader, optimizer, scheduler, config, epoch):
+def train_epoch(model, dataloader, optimizer, scheduler, config: SFTConfig, epoch: int):
     """Train for one epoch."""
     model.train()
     total_loss = 0
     correct = 0
     total = 0
     
+    # Determine input device (first device where model starts)
+    if hasattr(model.base_model, 'hf_device_map'):
+        # Model is distributed, find first device
+        first_device = next(iter(model.base_model.hf_device_map.values()))
+    else:
+        first_device = config.device
+    
     progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{config.epochs}")
     
     for step, batch in enumerate(progress_bar):
-        # Move batch to device
-        input_ids = batch['input_ids'].to(config.device)
-        attention_mask = batch['attention_mask'].to(config.device)
-        labels = batch['labels'].to(config.device)
+        # Move batch to first device (model will handle distribution)
+        input_ids = batch['input_ids'].to(first_device)
+        attention_mask = batch['attention_mask'].to(first_device)
+        labels = batch['labels'].to(first_device)
         
         # Forward pass
         scores = model(input_ids, attention_mask)  # [batch_size, num_candidates]
@@ -397,12 +404,18 @@ def validate(model, dataloader, config):
     reward_gained = 0
     max_possible_reward = 0
     
+    # Determine input device (first device where model starts)
+    if hasattr(model.base_model, 'hf_device_map'):
+        first_device = next(iter(model.base_model.hf_device_map.values()))
+    else:
+        first_device = config.device
+    
     with torch.no_grad():
         for batch in tqdm(dataloader, desc="Validating"):
-            input_ids = batch['input_ids'].to(config.device)
-            attention_mask = batch['attention_mask'].to(config.device)
-            labels = batch['labels'].to(config.device)
-            rewards = batch['rewards'].to(config.device)
+            input_ids = batch['input_ids'].to(first_device)
+            attention_mask = batch['attention_mask'].to(first_device)
+            labels = batch['labels'].to(first_device)
+            rewards = batch['rewards'].to(first_device)
             
             scores = model(input_ids, attention_mask)
             loss = F.cross_entropy(scores, labels)
