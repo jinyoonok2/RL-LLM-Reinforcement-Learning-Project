@@ -85,22 +85,30 @@ def calculate_rewards_for_candidates(input_dir: str, output_dir: str, weights: d
             # Calculate reward for each candidate
             for cand in ex['candidates']:
                 prediction = cand['answer']
+                predicted_program = cand.get('program', [])
                 
                 # Calculate component rewards
                 components = reward_calc.calculate_component_rewards(
                     prediction=prediction,
                     ground_truth=gold_answer,
-                    question=ex['question']
+                    predicted_program=predicted_program if isinstance(predicted_program, list) else None,
+                    ground_truth_program=gold_candidate.get('program', []) if gold_candidate else None
                 )
                 
-                # Calculate total reward
-                total_reward = sum(components.__dict__.values())
+                # Calculate total reward (use the total field from components)
+                total_reward = components.total
                 
                 # Add reward info to candidate
                 cand_with_reward = {
                     **cand,
                     'reward': total_reward,
-                    'reward_components': components.__dict__
+                    'reward_components': {
+                        'exact_match': components.exact_match,
+                        'numerical_close': components.numerical_close,
+                        'program_valid': components.program_valid,
+                        'format_valid': components.format_valid,
+                        'total': components.total
+                    }
                 }
                 candidates_with_rewards.append(cand_with_reward)
                 
