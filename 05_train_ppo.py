@@ -47,10 +47,10 @@ class PPOConfig:
     
     # PPO hyperparameters
     learning_rate: float = 1e-5
-    batch_size: int = 8  # For 2 GPUs (use 12-16 for 4 GPUs)
+    batch_size: int = 12  # Increased for better GPU utilization on 2 GPUs
     mini_batch_size: int = 4  # Half of batch size
     gradient_accumulation_steps: int = 1  # No accumulation needed
-    ppo_epochs: int = 2  # Reduced from 4 for faster training
+    ppo_epochs: int = 1  # Single pass is enough with good initialization
     clip_range: float = 0.2
     kl_coef: float = 0.05
     target_kl: float = 0.01
@@ -448,16 +448,16 @@ def train_ppo_epoch(
         attention_mask = batch['attention_mask'].to(first_device)
         rewards = batch['rewards'].to(first_device)
         
+        # Cache reference model logprobs (only compute once per batch)
+        with torch.no_grad():
+            ref_scores = ref_model(input_ids, attention_mask)
+            ref_logprobs = F.log_softmax(ref_scores, dim=1)
+        
         # PPO update with multiple inner epochs
         for ppo_epoch in range(config.ppo_epochs):
             # Forward pass - policy
             policy_scores = policy_model(input_ids, attention_mask)
             policy_logprobs = F.log_softmax(policy_scores, dim=1)
-            
-            # Forward pass - reference (frozen)
-            with torch.no_grad():
-                ref_scores = ref_model(input_ids, attention_mask)
-                ref_logprobs = F.log_softmax(ref_scores, dim=1)
             
             # Compute PPO loss
             loss, info = compute_ppo_loss(
