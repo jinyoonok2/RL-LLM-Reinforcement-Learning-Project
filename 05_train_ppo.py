@@ -557,7 +557,8 @@ def evaluate(model, dataloader, config: PPOConfig):
             
             # Track average reward of selected candidates
             batch_indices = torch.arange(predictions.size(0), device=predictions.device)
-            selected_rewards = rewards[batch_indices, predictions]
+            # Move rewards to same device for indexing
+            selected_rewards = rewards.to(predictions.device)[batch_indices, predictions]
             total_reward += selected_rewards.sum().item()
     
     accuracy = correct / total if total > 0 else 0
