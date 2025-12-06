@@ -698,7 +698,7 @@ def main():
         
         # Evaluate
         if (epoch + 1) % config.eval_freq == 0:
-            val_metrics = evaluate(model, val_loader, config)
+            val_metrics = evaluate(policy_model, val_loader, config)
             logger.info(f"Validation - "
                        f"Accuracy: {val_metrics['accuracy']:.2%}, "
                        f"Avg Reward: {val_metrics['avg_reward']:.4f}")
