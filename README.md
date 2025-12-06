@@ -1,103 +1,102 @@
-# RL-LLM Reinforcement Learning Project
+# RL-LLM: Reinforcement Learning for Financial Question Answering
 
-**RL Pipeline for LLMs — FinQA → SFT → RL → Evaluation**
+**Optimizing LLMs with PPO for Mathematical Reasoning on FinQA**
 
-This project implements and compares multiple reinforcement learning methods for training Large Language Models on the **FinQA** dataset. The codebase uses a clean, modular design where each component is a single Python file with clear inputs/outputs and responsibilities.
+This project trains language models using Proximal Policy Optimization (PPO) to improve accuracy on financial question-answering tasks. It uses a classification-based approach where models learn to select the best answer from multiple candidates, optimized for speed and memory efficiency on multi-GPU setups.
 
-> **Research Goal**: Compare RL methods (PPO, GRPO, RLOO, DPO) for improving mathematical reasoning in financial question-answering tasks.
-
-## 📑 Table of Contents
-
-1. [Quick Start](#-quick-start)
-2. [Project Structure](#-project-structure)
-3. [Module Specifications](#-module-specifications)
-4. [Model Configuration](#-model-configuration)
-5. [Troubleshooting](#-troubleshooting)
+> **Goal**: Train Llama models with supervised fine-tuning + PPO to achieve high accuracy on mathematical reasoning in financial contexts.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- CUDA-capable GPU with 24GB+ VRAM (for 8B models)
-- Linux/WSL environment
+- Python 3.10+
+- 2-4 CUDA GPUs with 24GB VRAM each (tested on 2× RTX 4090)
+- Linux environment
 
-### Setup Instructions
+### Installation
 
-1. **Clone and Setup Environment**:
-   ```bash
-   git clone https://github.com/jinyoonok2/RL-LLM-Reinforcement-Learning-Project.git
-   cd RL-LLM-Reinforcement-Learning-Project
-   
-   # Create virtual environment and install dependencies
-   ./setup.sh
-   ```
+```bash
+# 1. Clone repository
+git clone https://github.com/jinyoonok2/RL-LLM-Reinforcement-Learning-Project.git
+cd RL-LLM-Reinforcement-Learning-Project
 
-2. **Activate Environment**:
-   ```bash
-   source activate.sh           # Use 'source' to stay in the environment
-   # You should see (venv) in your prompt
-   ```
+# 2. Setup environment
+./setup.sh        # Creates venv and installs dependencies
+source activate.sh # Activates environment
 
-3. **Download Data & Models**:
-   ```bash
-   # Default: FinQA dataset + Llama-3.2-1B model (~2.5GB, fast testing)
-   bash download.sh
-   
-   # For production 8B model:
-   bash download.sh --model meta-llama/Meta-Llama-3-8B-Instruct
-   ```
+# 3. Download FinQA dataset and Llama-3.2-3B model
+bash download.sh
+```
 
-4. **Run the Pipeline**:
-   ```bash
-   # Step 1: Check data
-   python 00_check_data.py
-   
-   # Step 2: Prepare dataset
-   python 01_prepare_dataset.py
-   
-   # Step 3: Build rewards
-   python 02_build_rewards.py
-   
-   # Step 4: SFT training (uses Llama-3.2-1B by default)
-   python 03_sft_train.py
-   
-   # Step 5: Generate candidates
-   python 04_generate_candidates.py --policy_ckpt outputs/run_001/03_sft
-   
-   # For 8B model training:
-   python 03_sft_train.py --config configs/models/llama-3-8b.yaml
-   ```
+### Training Pipeline
 
-### Model Selection
+Run the complete pipeline or individual steps:
 
-**Ultra-Fast (DialoGPT)**: 863MB, ~20-30 min training
-- Use: `--config configs/models/dialogpt-medium.yaml`
-- Best for: Rapid prototyping and algorithm development
+```bash
+# Full pipeline (data prep → SFT → PPO)
+./run_full_pipeline.sh
 
-**Fast (TinyLlama)**: 2.2GB, ~40-60 min training  
-- Use: `--config configs/models/tinyllama-1.1b.yaml`
-- Best for: Testing Llama-style architectures quickly
+# Or run steps individually:
+python 00_check_data.py              # Verify dataset integrity
+python 01_prepare_dataset.py         # Create train/val/test splits
+python 04_generate_candidates.py     # Generate answer candidates
+python 02_build_rewards.py           # Calculate rewards for candidates
+python 04_sft_train.py               # Supervised fine-tuning (3B model)
+python 05_train_ppo.py --policy_ckpt outputs/run_001/04_sft_llama3b/best_model
+```
 
-**Balanced (Llama-3.2-1B)**: 2.5GB, ~60-90 min training
-- Use: `--config configs/models/llama-3.2-1b.yaml` (default)
-- Best for: Good balance of speed and quality
+### Model Options
 
-**Ultra-Fast Mode**: Any model with rank-8 LoRA
-- Use: `--config configs/models/llama-3.2-1b-ultrafast.yaml`
-- Best for: Lightning-fast iterations
+**Llama-3.2-3B** (default, recommended):
+- Speed: ~2-3 hours SFT, ~4 hours PPO on 2 GPUs
+- Quality: Good balance of performance and speed
+- Config: `configs/models/llama-3.2-3b.yaml`
+
+**Llama-3-8B** (higher quality):
+- Speed: ~3.5 hours SFT, ~9 hours PPO on 4 GPUs
+- Quality: Best performance
+- Config: `configs/models/llama-3-8b.yaml`
+- Usage: `python 04_sft_train.py --config configs/models/llama-3-8b.yaml`
 
 ## 📁 Project Structure
 
+### Core Training Scripts
 ```
-├── README.md                      # This documentation
-├── requirements.txt               # Python dependencies
-├── setup.sh                       # Environment setup
-├── activate.sh                    # Environment activation
-├── download.sh                    # Data & model download
-│
-├── configs/
-│   ├── models/                    # Model configurations
-│   │   ├── llama-3.2-1b.yaml      # Default: 1B fast model
+00_check_data.py              # Validate FinQA dataset integrity
+01_prepare_dataset.py         # Split data into train/val/test
+04_generate_candidates.py     # Generate answer candidates from SFT model
+02_build_rewards.py           # Calculate rewards for candidate answers
+04_sft_train.py               # Supervised fine-tuning (classification mode)
+05_train_ppo.py               # PPO reinforcement learning training
+```
+
+### Configuration Files
+```
+configs/
+├── models/
+│   ├── llama-3.2-3b.yaml     # 3B model (default, optimized for 2 GPUs)
+│   └── llama-3-8b.yaml       # 8B model (higher quality, needs 4 GPUs)
+└── algorithms/
+    ├── ppo.yaml              # PPO hyperparameters
+    └── grpo.yaml             # GRPO configuration (future)
+```
+
+### Utilities
+```
+utils/
+├── common.py                 # Logging, config loading, file I/O
+├── evaluation.py             # Metrics and evaluation functions
+├── rewards.py                # Reward calculation logic
+└── trainer.py                # Shared training utilities
+```
+
+### Key Helper Scripts
+```
+run_full_pipeline.sh          # Execute complete training pipeline
+check_token_lengths.py        # Analyze dataset token distributions
+setup.sh                      # Environment setup
+download.sh                   # Download dataset and models
+```
 │   │   └── llama-3-8b.yaml        # Production: 8B model
 │   └── algorithms/                # RL algorithm configs
 │       ├── ppo.yaml
@@ -131,151 +130,137 @@ This project implements and compares multiple reinforcement learning methods for
         └── 04_candidates/         # Generated candidates
 ```
 
-## 🔬 Research Methodology
+## 🔬 Implementation Details
 
-### Global Conventions
+### Architecture: Classification-Based Approach
 
-- **Dataset**: `datasets/finqa/` (original JSON)
-- **Preprocessed**: `datasets/finqa_processed/` (JSONL format)
-- **Outputs**: `outputs/run_XXX/YY_module/` structure
-- **Models**: Default 1B for testing, 8B for production
-- **Configs**: Model-specific YAML files in `configs/models/`
-- **Determinism**: All modules accept `--seed` parameter
-- **Manifests**: Each module writes `manifest.json` with parameters
+Unlike traditional generation-based methods, this project uses a **classification approach** for efficiency:
 
-### Pipeline Overview
+**Input**: Question + 8 candidate answers  
+**Output**: Score distribution over candidates  
+**Training**: Cross-entropy to select highest-reward candidate  
+**Benefits**: 
+- Lower memory usage (no generation)
+- Faster training (fixed sequence length)
+- Better multi-GPU scaling
+- Easier to optimize with RL
 
-1. **Data Processing** (00-01): Validate and prepare FinQA dataset
-2. **Reward Setup** (02): Define reward functions for RL training
-3. **SFT Training** (03): Supervised fine-tuning base policy
-4. **Candidate Generation** (04): Sample multiple responses per prompt
-5. **RL Training** (05-09): Train with PPO/GRPO/RLOO/DPO methods
-6. **Evaluation** (10-11): Compare and analyze results
+### Training Pipeline
 
-## 📋 Module Specifications
+1. **Data Preparation** (`00_check_data.py`, `01_prepare_dataset.py`)
+   - Validates FinQA dataset (8,281 examples)
+   - Creates train/val/test splits
+   - Output: `datasets/finqa_with_rewards/`
 
-### 00_check_data.py — Data Validation ✅
+2. **Candidate Generation** (`04_generate_candidates.py`)
+   - Generates 8 diverse answer candidates per question
+   - Uses sampling with temperature=0.7
+   - Output: 66,248 total candidates
 
-Validates FinQA dataset integrity and structure.
+3. **Reward Calculation** (`02_build_rewards.py`)
+   - Evaluates each candidate for correctness
+   - Metrics: exact match, numeric tolerance, program match
+   - Average reward: 0.637 (gold: 1.30, corrupted: 0.54)
 
-```bash
-python 00_check_data.py
+4. **Supervised Fine-Tuning** (`04_sft_train.py`)
+   - Trains model to select best candidate from pool
+   - Uses LoRA (rank=16, alpha=32) for efficiency
+   - 3 epochs, batch_size=2, max_length=256
+   - Output: Policy initialization for PPO
+
+5. **PPO Training** (`05_train_ppo.py`)
+   - Optimizes candidate selection with PPO
+   - 10 epochs, batch_size=12, single PPO inner epoch
+   - Caches reference model outputs for speed
+   - Expected: 4 hours on 2× RTX 4090
+
+### Optimizations Applied
+
+**Model Size**: Llama-3.2-3B (2.6× faster than 8B, better than 1B)  
+**Sequence Length**: 256 tokens (99.9% coverage, 2× speedup vs 512)  
+**Batch Size**: 12 for 2 GPUs (optimized for 48GB total VRAM)  
+**LoRA**: rank=16, 4 target modules (0.27% trainable params)  
+**PPO Epochs**: 1 inner epoch (50% speedup, still converges)  
+**Reference Caching**: Compute ref logprobs once per batch  
+
+**Combined Speedup**: ~6-8× vs baseline 8B/512 configuration
+
+## 📊 Expected Results
+
+### Performance Metrics
+
+**SFT Baseline** (after supervised fine-tuning):
+- Accuracy: ~90-92%
+- Average reward: ~0.63-0.64
+
+**PPO** (after reinforcement learning):
+- Target accuracy: 93-95%
+- Target avg reward: 0.70-0.80
+- KL divergence: <0.01 (stays close to SFT policy)
+
+### Training Time (2× RTX 4090)
+
+| Stage | Duration | Memory |
+|-------|----------|--------|
+| Data Prep (00-02) | ~5 min | Minimal |
+| SFT Training | ~2-3 hours | 22GB/GPU |
+| PPO Training | ~4 hours | 23GB/GPU |
+| **Total** | **~7 hours** | **48GB total** |
+
+### Output Structure
+
+```
+outputs/run_001/
+├── 04_sft_llama3b/
+│   ├── best_model/              # Best SFT checkpoint
+│   ├── final_model/             # Final SFT checkpoint
+│   └── training_manifest.json   # Training metrics
+└── 05_ppo/
+    ├── best_model/              # Best PPO checkpoint
+    ├── checkpoint_epoch_N/      # Periodic checkpoints
+    └── final_model/             # Final PPO model
+```
+## ⚙️ Configuration
+
+### Model Configs (`configs/models/`)
+
+**llama-3.2-3b.yaml** (default):
+```yaml
+model:
+  name: meta-llama/Llama-3.2-3B
+  
+lora:
+  r: 16              # LoRA rank
+  alpha: 32          # Scaling factor
+  target_modules: [q_proj, v_proj, o_proj, gate_proj]
+
+training:
+  epochs: 3
+  batch_size: 2      # For 2 GPUs
+  gradient_accumulation_steps: 4
+  max_length: 256    # Optimized for speed
+  learning_rate: 2e-5
+  bf16: true
 ```
 
-**Outputs**: `outputs/run_001/00_data_validation/`
-- Dataset statistics summary
-- Sample examples
-- Manifest with validation results
+**llama-3-8b.yaml** (high quality):
+- Same structure, larger model
+- Requires 4 GPUs or reduces batch size
+- Longer training time (~3× slower)
 
----
+### Algorithm Configs (`configs/algorithms/`)
 
-### 01_prepare_dataset.py — Dataset Preparation ✅
-
-Converts FinQA to JSONL format with unified prompt/target structure.
-
-```bash
-python 01_prepare_dataset.py
+**ppo.yaml**:
+```yaml
+ppo:
+  learning_rate: 1e-5
+  batch_size: 12
+  ppo_epochs: 1           # Inner optimization steps
+  clip_range: 0.2
+  kl_coef: 0.05
+  entropy_coef: 0.01
+  total_epochs: 10
 ```
-
-**Outputs**: `datasets/finqa_processed/`
-- `train.jsonl`, `val.jsonl`, `test.jsonl`
-- Fields: `id`, `input_text`, `target_answer`, `target_program`, `question`
-
----
-
-### 02_build_rewards.py — Reward Functions ✅
-
-Implements FinQA reward calculator (answer + program correctness).
-
-```bash
-python 02_build_rewards.py
-```
-
-**Outputs**: `outputs/run_001/02_rewards/`
-- `reward_spec.yaml`: Reward configuration
-- Test results showing reward components
-
-**Reward Components**:
-- Exact match bonus: +1.0
-- Numeric match (5% tolerance): +0.8  
-- Partial program match: +0.3
-- Format penalty: -0.2
-
----
-
-### 03_sft_train.py — Supervised Fine-Tuning ✅
-
-Fine-tunes LLM to generate JSON responses with LoRA.
-
-```bash
-# Default: Llama-3.2-1B
-python 03_sft_train.py
-
-# Production: Llama-3-8B
-python 03_sft_train.py --config configs/models/llama-3-8b.yaml
-```
-
-**Key Features**:
-- LoRA training (0.34% trainable params)
-- Batch size 1 + gradient accumulation 4
-- Learning rate: 5e-6 (stable for LoRA)
-- Validation every 500 steps
-
-**Outputs**: `outputs/run_001/03_sft/`
-- `ckpt_sft/`: Model checkpoints
-- `valid_samples/`: Generated samples with rewards
-- Training logs with loss curves
-
----
-
-### 04_generate_candidates.py — Candidate Generation ✅
-
-Generates K diverse candidate responses for RL training.
-
-```bash
-python 04_generate_candidates.py --policy_ckpt outputs/run_001/03_sft
-```
-
-**Parameters**:
-- `--num_candidates`: Number of samples per prompt (default: 4)
-- `--temperature`: Sampling temperature (default: 0.8)
-- `--top_p`: Nucleus sampling (default: 0.9)
-
-**Outputs**: `outputs/run_001/04_candidates/`
-- `candidates.jsonl`: K responses per prompt
-- `scores.jsonl`: Reward scores for each candidate
-
----
-
-### 05_train_ppo.py — PPO Training 🚧
-
-**Status**: In progress
-
-Proximal Policy Optimization with KL penalty.
-
-```bash
-python 05_train_ppo.py --policy_ckpt outputs/run_001/03_sft
-```
-
----
-
-### 06-09: Additional RL Methods 🚧
-
-**Status**: Planned
-
-- **06_train_grpo.py**: Group Relative Policy Optimization
-- **07_train_rloo.py**: REINFORCE Leave-One-Out
-- **08_build_prefs.py**: Preference pair construction
-- **09_train_dpo.py**: Direct Preference Optimization
-
----
-
-### 10-11: Evaluation 🚧
-
-**Status**: Planned
-
-- **10_evaluate.py**: Unified evaluation framework
-- **11_compare_runs.py**: Cross-method comparison
 
 ## 🔧 Model Configuration
 
@@ -312,107 +297,66 @@ Both configs include:
 
 **2. Model Download Fails**
 ```bash
-# Authenticate with HuggingFace
-huggingface-cli login
+## 🛠️ Troubleshooting
 
-# Accept Llama license at:
-# https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct
+### Common Issues
+
+**OOM Error during training**:
+```bash
+# Reduce batch size in config
+training:
+  batch_size: 1
+  gradient_accumulation_steps: 8  # Keep effective batch size
 ```
 
-**3. Training Loss is NaN**
-- Already fixed with learning_rate=5e-6
-- If still occurs, lower to 1e-6
+**Device mismatch errors**:
+- Fixed in latest version
+- Run `git pull origin main` to get updates
 
-**4. Parse Rate Low (<50%)**
-- SFT needs more epochs or better prompt format
-- Check validation samples in `outputs/run_001/03_sft/valid_samples/`
+**Training won't resume from checkpoint**:
+- PPO automatically detects and resumes from `checkpoint_epoch_N/`
+- Check `outputs/run_001/05_ppo/` for existing checkpoints
 
-**5. Zero Rewards**
-- Verify reward function: `python 02_build_rewards.py`
-- Check JSON format in generated samples
+**Model download issues**:
+```bash
+# Authenticate with HuggingFace
+huggingface-cli login
+# Accept Llama license at https://huggingface.co/meta-llama/Llama-3.2-3B
+```
 
-### Getting Help
+**Slow training**:
+- Use 3B model instead of 8B (2.6× faster)
+- Verify `max_length: 256` in config
+- Check GPU utilization with `nvidia-smi`
 
-- Check module outputs in `outputs/run_001/`
-- Review `manifest.json` files for configuration
-- Examine validation samples for model behavior
+### Performance Tips
 
----
-
-**Last Updated**: November 2025  
-**Status**: Modules 00-04 complete, 05-11 in development
-- `--policy_ckpt`
-- `--reward_spec`
-- `--num_samples K` (per prompt), `--seed`
-
-**Saves (in `outputs/finqa_rl/run_001/07_rloo/`)**
-- `ckpt_rloo/`
-- `logs/` (per-sample reward, LOO baselines, gradient norm)
-- `val_generations/`
-- `manifest.json`
-
-**Verify**
-- Unbiased estimator sanity checks pass (expected sign vs advantage)
-- Reward variance and gradient variance lower than plain REINFORCE
-- EM/format metrics rise vs SFT baseline
+1. **Token length optimization**: Run `python check_token_lengths.py` to verify max_length setting
+2. **Multi-GPU setup**: Automatic with `device_map="auto"`
+3. **Checkpoint resumption**: Enabled by default, saves progress every 2 epochs
+4. **Memory monitoring**: Watch `nvidia-smi` during training
 
 ---
 
-### 08_build_prefs.py — Preference Pairs for DPO
+## 📝 Citation
 
-**Goal**: Construct (preferred, rejected) pairs automatically from candidate generations + reward rules.
+```bibtex
+@misc{rl-llm-finqa,
+  author = {Jin Yoon Ok},
+  title = {RL-LLM: Reinforcement Learning for Financial Question Answering},
+  year = {2025},
+  url = {https://github.com/jinyoonok2/RL-LLM-Reinforcement-Learning-Project}
+}
+```
 
-**Inputs**
-- `--candidates outputs/finqa_rl/run_001/04_candidates/candidates.jsonl`
-- `--reward_spec outputs/finqa_rl/02_rewards/reward_spec.yaml`
-- Pairing rules: e.g., prefer exact-match & valid JSON over non-match or invalid
+## 📄 License
 
-**Saves (in `outputs/finqa_rl/run_001/08_prefs/`)**
-- `pairs.jsonl` (fields: `id`, `prompt`, `chosen`, `rejected`, optional reward diffs)
-- `stats.txt` (pair counts, margin histograms)
-- `manifest.json`
-
-**Verify**
-- All pairs pass JSON parse checks; chosen has ≥ rejected reward
-- Pair margins (reward(chosen) − reward(rejected)) show healthy spread
-- At least N≥10k pairs for robust DPO (or log smaller scale)
+MIT License - see LICENSE file for details.
 
 ---
 
-### 09_train_dpo.py — Direct Preference Optimization
-
-**Goal**: Train with DPO objective to increase probability of preferred outputs under KL regularization.
-
-**Inputs**
-- `--base_or_sft_ckpt`
-- `--pairs outputs/finqa_rl/run_001/08_prefs/pairs.jsonl`
-- `--beta` (temperature/regularization), `--seed`
-
-**Saves (in `outputs/finqa_rl/run_001/09_dpo/`)**
-- `ckpt_dpo/`
-- `logs/` (DPO loss, KL to reference)
-- `val_generations/`
-- `manifest.json`
-
-**Verify**
-- Preference accuracy on a held-out preference set increases
-- JSON validity remains high; EM improves vs SFT
-- KL stays within intended range (no drift)
-
----
-
-### 10_evaluate.py — Metrics on Held-Out Test
-
-**Goal**: Compute end-to-end metrics on `test.jsonl` for any checkpoint.
-
-**Inputs**
-- `--policy_ckpt <path>` (e.g., `05_ppo/ckpt_ppo/` or `06_grpo/ckpt_grpo/` etc.)
-- `--test_jsonl outputs/finqa_rl/01_prepared/test.jsonl`
-- `--reward_spec outputs/finqa_rl/02_rewards/reward_spec.yaml`
-
-**Saves (in `outputs/finqa_rl/run_001/10_eval/`)**
-- `metrics.json`: exact match, numeric correctness, program validity, format compliance
-- `breakdown.csv`: per-item metrics and failure reasons
+**Status**: Active development  
+**Last Updated**: December 2025
 - `samples/`: selected generations with targets and reward components
 - `manifest.json`
 
