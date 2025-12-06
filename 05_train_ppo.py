@@ -550,7 +550,8 @@ def evaluate(model, dataloader, config: PPOConfig):
             predictions = scores.argmax(dim=1)
             
             # Check if prediction matches highest reward
-            best_reward_idx = rewards.argmax(dim=1)
+            # Move to same device as predictions to avoid device mismatch
+            best_reward_idx = rewards.argmax(dim=1).to(predictions.device)
             correct += (predictions == best_reward_idx).sum().item()
             total += predictions.size(0)
             
@@ -568,8 +569,8 @@ def evaluate(model, dataloader, config: PPOConfig):
     }
 
 
-def save_checkpoint(model, tokenizer, output_dir: Path, name: str = "checkpoint"):
-    """Save model checkpoint."""
+def save_checkpoint(model, tokenizer, output_dir: Path, name: str = "checkpoint", epoch: int = None, best_reward: float = None):
+    """Save model checkpoint with training state."""
     checkpoint_dir = output_dir / name
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     
@@ -586,7 +587,40 @@ def save_checkpoint(model, tokenizer, output_dir: Path, name: str = "checkpoint"
     # Save tokenizer
     tokenizer.save_pretrained(checkpoint_dir)
     
+    # Save training state
+    if epoch is not None or best_reward is not None:
+        state = {
+            'epoch': epoch,
+            'best_reward': best_reward
+        }
+        state_path = checkpoint_dir / "training_state.pt"
+        torch.save(state, state_path)
+        logger.info(f"Saved training state: epoch={epoch}, best_reward={best_reward:.4f}")
+    
     logger.info(f"Checkpoint saved to {checkpoint_dir}")
+
+
+def load_training_state(output_dir: Path):
+    """Load training state from last checkpoint."""
+    # Check for existing checkpoints
+    checkpoint_pattern = output_dir / "checkpoint_epoch_*"
+    checkpoints = sorted(output_dir.glob("checkpoint_epoch_*"))
+    
+    if not checkpoints:
+        return None, 0, 0.0
+    
+    # Get latest checkpoint
+    latest_checkpoint = checkpoints[-1]
+    state_path = latest_checkpoint / "training_state.pt"
+    
+    if not state_path.exists():
+        return None, 0, 0.0
+    
+    state = torch.load(state_path)
+    logger.info(f"Found checkpoint: {latest_checkpoint.name}")
+    logger.info(f"Resuming from epoch {state['epoch']}, best_reward={state['best_reward']:.4f}")
+    
+    return latest_checkpoint, state['epoch'], state['best_reward']
 
 
 def main():
@@ -676,9 +710,22 @@ def main():
     output_dir = Path(config.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    best_reward = -float('inf')
+    # Check for existing checkpoint to resume
+    resume_ckpt, start_epoch, best_reward = load_training_state(output_dir)
     
-    for epoch in range(config.total_epochs):
+    if resume_ckpt is not None:
+        logger.info(f"🔄 Resuming training from {resume_ckpt.name}")
+        # Load checkpoint into policy model
+        policy_model.base_model.load_adapter(str(resume_ckpt))
+        score_head_path = resume_ckpt / "score_head.pt"
+        policy_model.score_head.load_state_dict(torch.load(score_head_path))
+        logger.info(f"✅ Loaded checkpoint, starting from epoch {start_epoch + 1}")
+    else:
+        start_epoch = 0
+        best_reward = -float('inf')
+        logger.info("Starting training from scratch")
+    
+    for epoch in range(start_epoch, config.total_epochs):
         # Train
         train_metrics = train_ppo_epoch(
             policy_model,
@@ -706,15 +753,15 @@ def main():
             # Save best model
             if val_metrics['avg_reward'] > best_reward:
                 best_reward = val_metrics['avg_reward']
-                save_checkpoint(policy_model, tokenizer, output_dir, "best_model")
+                save_checkpoint(policy_model, tokenizer, output_dir, "best_model", epoch=epoch+1, best_reward=best_reward)
                 logger.info(f"💾 New best model! Reward: {best_reward:.4f}")
         
         # Save checkpoint
         if (epoch + 1) % config.save_freq == 0:
-            save_checkpoint(policy_model, tokenizer, output_dir, f"checkpoint_epoch_{epoch+1}")
+            save_checkpoint(policy_model, tokenizer, output_dir, f"checkpoint_epoch_{epoch+1}", epoch=epoch+1, best_reward=best_reward)
     
     # Final save
-    save_checkpoint(policy_model, tokenizer, output_dir, "final_model")
+    save_checkpoint(policy_model, tokenizer, output_dir, "final_model", epoch=config.total_epochs, best_reward=best_reward)
     
     logger.info("="*70)
     logger.info("✅ PPO Training Complete!")
