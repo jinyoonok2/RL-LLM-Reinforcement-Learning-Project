@@ -10,8 +10,8 @@ This replaces the generation-based approach with a classification approach:
 - Benefits: Much lower VRAM, faster training, better for RL
 
 Usage:
-    python 04_sft_train.py --config configs/models/llama-3-8b.yaml
-    python 04_sft_train.py --config configs/models/llama-3-8b.yaml --quick_test
+    python 04_sft_train.py --config configs/models/llama-3.2-3b.yaml
+    python 04_sft_train.py --config configs/models/llama-3.2-3b.yaml --quick_test
 """
 
 import json
@@ -475,7 +475,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="SFT Classification Training for FinQA")
-    parser.add_argument("--config", type=str, default="configs/models/llama-3-8b.yaml",
+    parser.add_argument("--config", type=str, default="configs/models/llama-3.2-3b.yaml",
                        help="Path to YAML config")
     parser.add_argument("--quick_test", action="store_true",
                        help="Quick test with subset")
