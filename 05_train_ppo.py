@@ -267,6 +267,10 @@ def compute_ppo_loss(
         loss: scalar loss
         info: dict with metrics
     """
+    # Move rewards to same device as logprobs (for multi-GPU)
+    if rewards.device != logprobs_policy.device:
+        rewards = rewards.to(logprobs_policy.device)
+    
     # Use rewards as advantages (can be improved with GAE)
     # Normalize rewards across candidates
     advantages = rewards - rewards.mean(dim=1, keepdim=True)
