@@ -19,8 +19,8 @@ lora:
 
 training:
   epochs: 3
-  batch_size: 4  # Balanced for 3B on 4x4090
-  gradient_accumulation_steps: 2
+  batch_size: 2  # Reduced for 2 GPUs (use 4 for 4 GPUs)
+  gradient_accumulation_steps: 4  # Increased to maintain effective batch size
   learning_rate: 2.0e-05
   warmup_steps: 100
   max_length: 256  # Optimized: 99.9% coverage, 2x speedup vs 512

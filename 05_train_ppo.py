@@ -47,8 +47,8 @@ class PPOConfig:
     
     # PPO hyperparameters
     learning_rate: float = 1e-5
-    batch_size: int = 12  # Increased for 3B model (2.6x smaller than 8B)
-    mini_batch_size: int = 6  # Half of batch size
+    batch_size: int = 8  # For 2 GPUs (use 12-16 for 4 GPUs)
+    mini_batch_size: int = 4  # Half of batch size
     gradient_accumulation_steps: int = 1  # No accumulation needed
     ppo_epochs: int = 2  # Reduced from 4 for faster training
     clip_range: float = 0.2
