@@ -89,6 +89,16 @@ print(f"\n{'='*60}")
 print(f"OVERALL SUMMARY")
 print(f"{'='*60}")
 
+if len(all_lengths) == 0:
+    print("\n❌ No data found!")
+    print("\n💡 You need to run the pipeline first:")
+    print("   1. python 00_check_data.py")
+    print("   2. python 01_prepare_dataset.py")
+    print("   3. python 02_generate_candidates.py")
+    print("   4. python 03_build_rewards.py")
+    print("\n   Then run this script again to analyze token lengths.")
+    exit(0)
+
 all_lengths = np.array(all_lengths)
 print(f"\n📊 Combined Statistics:")
 print(f"   Total sequences: {len(all_lengths):,}")
