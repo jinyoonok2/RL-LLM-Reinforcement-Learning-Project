@@ -39,7 +39,7 @@ class PPOConfig:
     """PPO training configuration."""
     # Model paths
     policy_ckpt: str = "outputs/run_001/04_sft/best_model"
-    base_model: str = "meta-llama/Meta-Llama-3-8B"
+    base_model: str = "meta-llama/Llama-3.2-3B"  # Good balance: 2.6x faster than 8B, better quality than 1B
     
     # Data paths
     data_dir: str = "datasets/finqa_with_rewards"
@@ -47,10 +47,10 @@ class PPOConfig:
     
     # PPO hyperparameters
     learning_rate: float = 1e-5
-    batch_size: int = 4
-    mini_batch_size: int = 2
-    gradient_accumulation_steps: int = 2
-    ppo_epochs: int = 4  # Inner PPO epochs per batch
+    batch_size: int = 12  # Increased for 3B model (2.6x smaller than 8B)
+    mini_batch_size: int = 6  # Half of batch size
+    gradient_accumulation_steps: int = 1  # No accumulation needed
+    ppo_epochs: int = 2  # Reduced from 4 for faster training
     clip_range: float = 0.2
     kl_coef: float = 0.05
     target_kl: float = 0.01
@@ -59,8 +59,8 @@ class PPOConfig:
     
     # Training
     num_candidates: int = 8
-    max_length: int = 512
-    total_epochs: int = 20
+    max_length: int = 512  # Keep at 512 for full FinQA context (questions can be long)
+    total_epochs: int = 10  # Reduced from 20 (PPO converges faster)
     warmup_steps: int = 50
     max_grad_norm: float = 1.0
     
@@ -343,10 +343,13 @@ def setup_models(config: PPOConfig):
             base_model = AutoModel.from_pretrained(
                 config.base_model,
                 torch_dtype=dtype,
-                device_map="auto"
+                device_map="auto",
+                use_cache=False  # Disable KV cache for training
             )
             # Load LoRA adapter
             base_model = PeftModel.from_pretrained(base_model, config.policy_ckpt)
+            # Enable gradient checkpointing for memory efficiency
+            base_model.gradient_checkpointing_enable()
         else:
             base_model = AutoModel.from_pretrained(config.base_model, torch_dtype=dtype)
             base_model = PeftModel.from_pretrained(base_model, config.policy_ckpt)
@@ -381,7 +384,8 @@ def setup_models(config: PPOConfig):
         ref_base_model = AutoModel.from_pretrained(
             config.base_model,
             torch_dtype=dtype,
-            device_map="auto"
+            device_map="auto",
+            use_cache=False
         )
         ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
     else:

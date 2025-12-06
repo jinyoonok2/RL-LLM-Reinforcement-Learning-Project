@@ -1,0 +1,46 @@
+model:
+  name: meta-llama/Llama-3.2-3B-Instruct
+  type: llama
+  architecture: LlamaForCausalLM
+  hidden_size: 3072
+  num_layers: 28
+  vocab_size: 128256
+
+lora:
+  use_lora: true
+  r: 16          # Optimized rank for 3B
+  alpha: 32      # 2x rank scaling
+  dropout: 0.05
+  target_modules:
+  - q_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+
+training:
+  epochs: 3
+  batch_size: 4  # Balanced for 3B on 4x4090
+  gradient_accumulation_steps: 2
+  learning_rate: 2.0e-05
+  warmup_steps: 100
+  max_length: 512  # Full FinQA context
+  fp16: false
+  bf16: true
+  max_grad_norm: 1.0
+
+validation:
+  eval_steps: 500
+  save_steps: 500
+  logging_steps: 100
+
+generation:
+  max_new_tokens: 128
+  temperature: 0.7
+  top_p: 0.9
+
+paths:
+  data_dir: datasets/finqa_with_rewards
+  output_dir: outputs/run_001/04_sft_llama3b
+
+metadata:
+  description: Llama-3.2-3B optimized for classification SFT - good balance of speed and quality
