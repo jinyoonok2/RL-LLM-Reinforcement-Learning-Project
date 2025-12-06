@@ -21,7 +21,7 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 DOWNLOAD_DATASET=true
 DOWNLOAD_MODEL=true
 DOWNLOAD_ALL_MODELS=false
-MODEL_NAME="meta-llama/Meta-Llama-3-8B"  # Default: 8B model for production
+MODEL_NAME="meta-llama/Llama-3.2-3B-Instruct"  # Default: 3B model (good balance of speed & quality)
 OUTPUT_DIR="datasets/finqa"
 MODEL_DIR="models"
 HF_TOKEN=""

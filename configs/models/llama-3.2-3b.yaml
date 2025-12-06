@@ -1,5 +1,5 @@
 model:
-  name: meta-llama/Llama-3.2-3B-Instruct
+  name: meta-llama/Llama-3.2-3B  # Base model (not Instruct) for fine-tuning
   type: llama
   architecture: LlamaForCausalLM
   hidden_size: 3072
