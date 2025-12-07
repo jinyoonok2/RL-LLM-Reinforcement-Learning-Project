@@ -331,14 +331,12 @@ def compute_grpo_loss(
 
 def setup_model(config: GRPOConfig):
     """Load model for GRPO (no reference model needed)."""
-    logger.info(f"Loading tokenizer from {config.policy_ckpt}")
-    
-    # Check if path exists locally
+    # Try to load tokenizer from checkpoint, fallback to base model
     policy_path = Path(config.policy_ckpt)
-    if policy_path.exists():
-        tokenizer = AutoTokenizer.from_pretrained(config.policy_ckpt, local_files_only=True)
-    else:
-        tokenizer = AutoTokenizer.from_pretrained(config.policy_ckpt)
+    tokenizer_path = policy_path if (policy_path / "tokenizer_config.json").exists() else config.base_model
+    
+    logger.info(f"Loading tokenizer from {tokenizer_path}")
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     
     if tokenizer.pad_token is None:
         if hasattr(tokenizer, 'eos_token') and tokenizer.eos_token is not None:

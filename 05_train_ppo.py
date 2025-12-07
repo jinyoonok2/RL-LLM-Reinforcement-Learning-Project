@@ -314,8 +314,12 @@ def compute_ppo_loss(
 
 def setup_models(config: PPOConfig):
     """Load policy and reference models."""
-    logger.info(f"Loading tokenizer from {config.policy_ckpt}")
-    tokenizer = AutoTokenizer.from_pretrained(config.policy_ckpt)
+    # Try to load tokenizer from checkpoint, fallback to base model
+    policy_path = Path(config.policy_ckpt)
+    tokenizer_path = policy_path if (policy_path / "tokenizer_config.json").exists() else config.base_model
+    
+    logger.info(f"Loading tokenizer from {tokenizer_path}")
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     
     # Handle pad token
     if tokenizer.pad_token is None:
