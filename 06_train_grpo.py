@@ -350,9 +350,18 @@ def setup_model(config: GRPOConfig):
     
     logger.info(f"Loading model from {config.policy_ckpt}")
     
-    adapter_config_path = Path(config.policy_ckpt) / "adapter_config.json"
+    # Check for LoRA adapter files
+    policy_path = Path(config.policy_ckpt)
+    adapter_config_path = policy_path / "adapter_config.json"
+    adapter_model_path = policy_path / "adapter_model.safetensors"
     
-    if adapter_config_path.exists():
+    # Alternative: check for adapter_model.bin
+    if not adapter_model_path.exists():
+        adapter_model_path = policy_path / "adapter_model.bin"
+    
+    has_lora = adapter_config_path.exists() and adapter_model_path.exists()
+    
+    if has_lora:
         logger.info("Detected LoRA checkpoint")
         
         if num_gpus > 1:
@@ -376,6 +385,8 @@ def setup_model(config: GRPOConfig):
             logger.info("Loading score_head weights")
             score_head_state = torch.load(score_head_path, map_location='cpu')
             model.score_head.load_state_dict(score_head_state)
+        else:
+            logger.warning(f"score_head.pt not found at {score_head_path}, using randomly initialized score_head")
         
         if num_gpus > 1 and hasattr(base_model, 'hf_device_map'):
             last_device = list(base_model.hf_device_map.values())[-1]
@@ -384,7 +395,15 @@ def setup_model(config: GRPOConfig):
         elif num_gpus <= 1:
             model = model.to(config.device)
     else:
-        raise NotImplementedError("Full model loading not yet implemented - use LoRA checkpoint")
+        # List what files exist for debugging
+        if policy_path.exists():
+            existing_files = list(policy_path.glob("*"))
+            logger.error(f"LoRA checkpoint not found. Files in {policy_path}:")
+            for f in existing_files:
+                logger.error(f"  - {f.name}")
+        else:
+            logger.error(f"Checkpoint directory does not exist: {policy_path}")
+        raise FileNotFoundError(f"LoRA checkpoint not found at {config.policy_ckpt}. Need adapter_config.json and adapter_model files.")
     
     logger.info("Model loaded successfully")
     return model, tokenizer
