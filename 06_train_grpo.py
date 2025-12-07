@@ -332,7 +332,13 @@ def compute_grpo_loss(
 def setup_model(config: GRPOConfig):
     """Load model for GRPO (no reference model needed)."""
     logger.info(f"Loading tokenizer from {config.policy_ckpt}")
-    tokenizer = AutoTokenizer.from_pretrained(config.policy_ckpt)
+    
+    # Check if path exists locally
+    policy_path = Path(config.policy_ckpt)
+    if policy_path.exists():
+        tokenizer = AutoTokenizer.from_pretrained(config.policy_ckpt, local_files_only=True)
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(config.policy_ckpt)
     
     if tokenizer.pad_token is None:
         if hasattr(tokenizer, 'eos_token') and tokenizer.eos_token is not None:
@@ -359,11 +365,11 @@ def setup_model(config: GRPOConfig):
                 device_map="auto",
                 use_cache=False
             )
-            base_model = PeftModel.from_pretrained(base_model, config.policy_ckpt)
+            base_model = PeftModel.from_pretrained(base_model, config.policy_ckpt, is_trainable=True)
             base_model.gradient_checkpointing_enable()
         else:
             base_model = AutoModel.from_pretrained(config.base_model, torch_dtype=dtype)
-            base_model = PeftModel.from_pretrained(base_model, config.policy_ckpt)
+            base_model = PeftModel.from_pretrained(base_model, config.policy_ckpt, is_trainable=True)
         
         model = CandidateRankingModel(base_model, config.num_candidates)
         
