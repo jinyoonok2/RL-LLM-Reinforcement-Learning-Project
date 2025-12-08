@@ -58,13 +58,13 @@ class GRPOConfig:
     # Training
     num_candidates: int = 8
     max_length: int = 256
-    total_epochs: int = 100
+    total_epochs: int = 10  # Match PPO for fair comparison
     warmup_steps: int = 50
     max_grad_norm: float = 1.0
     
     # Evaluation
-    eval_freq: int = 5
-    save_freq: int = 10
+    eval_freq: int = 1  # Evaluate every epoch
+    save_freq: int = 2  # Save every 2 epochs
     logging_steps: int = 50
     
     # Reward normalization
