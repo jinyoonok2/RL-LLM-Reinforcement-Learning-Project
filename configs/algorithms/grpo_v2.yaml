@@ -1,0 +1,33 @@
+# GRPO v2 - Improved settings for already strong SFT baseline
+# Use with: python 06_train_grpo.py --policy_ckpt outputs/run_001/04_sft_llama3b/best_model --algo_config configs/algorithms/grpo_v2.yaml
+
+# Core GRPO hyperparameters - MORE AGGRESSIVE
+learning_rate: 5.0e-5        # 3.3x higher for faster adaptation
+batch_size: 8
+gradient_accumulation_steps: 8
+
+# Group-based optimization - USE ALL CANDIDATES
+group_size: 8                # Use all 8 candidates (was 4)
+num_groups_per_batch: 1      # Single group comparison
+
+# Loss computation
+use_batch_bonus: true
+group_baseline: "mean"       # Keep mean baseline
+
+# Generation parameters
+max_new_tokens: 256
+temperature: 0.7
+top_p: 0.9
+do_sample: true
+
+# Training schedule - LONGER
+total_epochs: 30             # 3x longer training
+save_freq: 5                 # Save every 5 epochs
+eval_freq: 2                 # Evaluate every 2 epochs
+
+# Reward normalization
+normalize_reward: true
+reward_clip: 10.0
+
+# Stability
+clip_grad_norm: 1.0

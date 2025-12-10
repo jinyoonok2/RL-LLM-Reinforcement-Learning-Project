@@ -1,0 +1,36 @@
+# PPO v2 - More aggressive settings for already strong SFT baseline
+# Use with: python 05_train_ppo.py --policy_ckpt outputs/run_001/04_sft_llama3b/best_model --algo_config configs/algorithms/ppo_v2.yaml
+
+# Core PPO hyperparameters - MORE AGGRESSIVE
+learning_rate: 5.0e-5        # 3.5x higher for faster adaptation
+mini_batch_size: 1
+batch_size: 8
+gradient_accumulation_steps: 8
+
+# PPO algorithm parameters - MORE UPDATES
+ppo_epochs: 8                # 2x more epochs per batch
+clip_range: 0.3              # Higher clip for larger updates
+clip_range_vf: null
+vf_coef: 0.1
+
+# KL divergence control - RELAXED
+kl_coef: 0.02                # Lower penalty (was 0.05)
+target_kl: 0.2               # Higher target (was 0.1)
+
+# Generation parameters
+max_new_tokens: 256
+temperature: 0.7
+top_p: 0.9
+do_sample: true
+
+# Training schedule - LONGER
+total_ppo_epochs: 30         # 3x longer training
+save_freq: 5                 # Save every 5 epochs
+eval_freq: 2                 # Evaluate every 2 epochs
+
+# Reward normalization
+normalize_reward: true
+reward_clip: 10.0
+
+# Reference model
+use_reference_model: true
