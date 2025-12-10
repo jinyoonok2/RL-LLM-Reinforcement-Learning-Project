@@ -177,13 +177,31 @@ def load_model(checkpoint_path: str, base_model: str = "meta-llama/Llama-3.2-3B"
     # Load model
     dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
     
-    adapter_config_path = Path(checkpoint_path) / "adapter_config.json"
-    if adapter_config_path.exists():
+    # Check for LoRA adapter files
+    checkpoint_path_obj = Path(checkpoint_path)
+    adapter_config_path = checkpoint_path_obj / "adapter_config.json"
+    adapter_model_path = checkpoint_path_obj / "adapter_model.safetensors"
+    
+    # Alternative: check for adapter_model.bin
+    if not adapter_model_path.exists():
+        adapter_model_path = checkpoint_path_obj / "adapter_model.bin"
+    
+    has_lora = adapter_config_path.exists() and adapter_model_path.exists()
+    
+    if has_lora:
         logger.info("Loading LoRA checkpoint")
         base = AutoModel.from_pretrained(base_model, torch_dtype=dtype)
         base = PeftModel.from_pretrained(base, checkpoint_path)
     else:
-        raise FileNotFoundError(f"No adapter_config.json found at {checkpoint_path}")
+        # List what files exist for debugging
+        if checkpoint_path_obj.exists():
+            existing_files = list(checkpoint_path_obj.glob("*"))
+            logger.error(f"LoRA checkpoint not found. Files in {checkpoint_path}:")
+            for f in existing_files:
+                logger.error(f"  - {f.name}")
+        else:
+            logger.error(f"Checkpoint directory does not exist: {checkpoint_path}")
+        raise FileNotFoundError(f"LoRA checkpoint not found at {checkpoint_path}. Need adapter_config.json and adapter_model files.")
     
     model = CandidateRankingModel(base, num_candidates=8)
     
