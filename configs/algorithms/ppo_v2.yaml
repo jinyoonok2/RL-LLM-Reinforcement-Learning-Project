@@ -24,8 +24,8 @@ top_p: 0.9
 do_sample: true
 
 # Training schedule (IDENTICAL to v1)
-total_ppo_epochs: 10         # Same across all versions for fair comparison
-save_freq: 2                 # Save every 2 epochs
+total_ppo_epochs: 30         # Sufficient epochs for RL to show improvement
+save_freq: 5                 # Save every 5 epochs
 eval_freq: 2                 # Evaluate every 2 epochs
 
 # Reward normalization
