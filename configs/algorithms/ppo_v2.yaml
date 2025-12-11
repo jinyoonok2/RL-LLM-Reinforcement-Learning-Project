@@ -1,5 +1,5 @@
-# PPO v2 - Same as v1 for fair comparison (from SFT checkpoint)
-# Use with: python 05_train_ppo.py --policy_ckpt outputs/run_002/04_sft_llama3b/best_model --algo_config configs/algorithms/ppo_v2.yaml --output_dir outputs/run_002/05_ppo_v2
+# PPO v2 - Training from base model (no SFT initialization, pure RL)
+# Use with: python 05_train_ppo.py --policy_ckpt meta-llama/Llama-3.2-3B --algo_config configs/algorithms/ppo_v2.yaml --output_dir outputs/run_002/05_ppo_v2 --from_scratch
 
 # Core PPO hyperparameters (IDENTICAL to v1 for fair comparison)
 learning_rate: 1.41e-5       # Same as v1
@@ -23,8 +23,8 @@ temperature: 0.7
 top_p: 0.9
 do_sample: true
 
-# Training schedule (IDENTICAL to v1)
-total_ppo_epochs: 30         # Sufficient epochs for RL to show improvement
+# Training schedule - LONGER for from-scratch training
+total_ppo_epochs: 40         # 40 epochs to match v1/v2 total budget (10 SFT + 30 RL = 40)
 save_freq: 5                 # Save every 5 epochs
 eval_freq: 2                 # Evaluate every 2 epochs
 
