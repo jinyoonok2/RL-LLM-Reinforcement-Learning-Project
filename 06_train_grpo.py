@@ -44,10 +44,10 @@ class GRPOConfig:
     data_dir: str = "datasets/finqa_with_rewards"
     output_dir: str = "outputs/run_001/06_grpo"
     
-    # GRPO hyperparameters
+    # GRPO hyperparameters (defaults - overridden by YAML configs)
     learning_rate: float = 1.5e-5
-    batch_size: int = 8
-    gradient_accumulation_steps: int = 8
+    batch_size: int = 2  # Reduced for dual model memory constraints
+    gradient_accumulation_steps: int = 16  # Maintain effective batch=32
     group_size: int = 4  # Number of candidates to compare per group
     num_groups_per_batch: int = 2  # Number of groups in each batch
     
@@ -58,13 +58,13 @@ class GRPOConfig:
     # Training
     num_candidates: int = 8
     max_length: int = 256
-    total_epochs: int = 10  # Match PPO for fair comparison
+    total_epochs: int = 20  # Reduced for lighter training
     warmup_steps: int = 50
     max_grad_norm: float = 1.0
     
     # Evaluation
-    eval_freq: int = 1  # Evaluate every epoch
-    save_freq: int = 2  # Save every 2 epochs
+    eval_freq: int = 5  # Less frequent for speed
+    save_freq: int = 5  # Matches updated configs
     logging_steps: int = 50
     
     # Reward normalization
@@ -93,11 +93,20 @@ class GRPOConfig:
                 if key in train_cfg:
                     setattr(config, key, train_cfg[key])
         
-        # GRPO-specific params
-        for key in ['group_size', 'num_groups_per_batch', 'use_batch_bonus', 
-                   'group_baseline', 'normalize_reward', 'reward_clip']:
+        # Handle flat algorithm config YAML (like grpo.yaml)
+        flat_keys = {
+            'learning_rate', 'batch_size', 'gradient_accumulation_steps',
+            'group_size', 'num_groups_per_batch', 'use_batch_bonus', 
+            'group_baseline', 'normalize_reward', 'reward_clip',
+            'total_grpo_epochs', 'save_freq', 'eval_freq'
+        }
+        for key in flat_keys:
             if key in cfg_dict:
-                setattr(config, key, cfg_dict[key])
+                # Map total_grpo_epochs to total_epochs
+                if key == 'total_grpo_epochs':
+                    config.total_epochs = cfg_dict[key]
+                else:
+                    setattr(config, key, cfg_dict[key])
         
         if 'paths' in cfg_dict:
             paths = cfg_dict['paths']
