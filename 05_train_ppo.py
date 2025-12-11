@@ -335,10 +335,12 @@ def setup_models(config: PPOConfig):
     
     logger.info(f"Loading policy model from {config.policy_ckpt}")
     
-    # Check if policy_ckpt has LoRA adapter
-    adapter_config_path = Path(config.policy_ckpt) / "adapter_config.json"
+    # Check if policy_ckpt has LoRA adapter (or if it's a base model path)
+    policy_path_obj = Path(config.policy_ckpt)
+    adapter_config_path = policy_path_obj / "adapter_config.json"
+    is_base_model = not policy_path_obj.exists() or config.policy_ckpt.startswith("meta-llama/")
     
-    if adapter_config_path.exists():
+    if adapter_config_path.exists() and not is_base_model:
         # Load base model + LoRA adapter
         logger.info("Detected LoRA checkpoint, loading base model + adapter")
         
@@ -377,9 +379,45 @@ def setup_models(config: PPOConfig):
             policy_model = policy_model.to(config.device)
         
     else:
-        # Load full model checkpoint (not LoRA)
-        logger.info("Loading full model checkpoint")
-        raise NotImplementedError("Full model loading not yet implemented - use LoRA checkpoint")
+        # Initialize from base model (no LoRA, training from scratch)
+        logger.info(f"Initializing from base model (no SFT): {config.base_model}")
+        logger.info("Score_head will be randomly initialized")
+        
+        # Setup LoRA on base model
+        from peft import LoraConfig, get_peft_model, TaskType
+        
+        if num_gpus > 1:
+            base_model = AutoModel.from_pretrained(
+                config.base_model,
+                torch_dtype=dtype,
+                device_map="auto",
+                use_cache=False
+            )
+        else:
+            base_model = AutoModel.from_pretrained(config.base_model, torch_dtype=dtype)
+        
+        # Apply LoRA
+        lora_config = LoraConfig(
+            r=16,
+            lora_alpha=32,
+            target_modules=["q_proj", "v_proj", "o_proj", "gate_proj"],
+            lora_dropout=0.05,
+            bias="none",
+            task_type=TaskType.FEATURE_EXTRACTION
+        )
+        base_model = get_peft_model(base_model, lora_config)
+        base_model.print_trainable_parameters()
+        
+        # Wrap in ranking model (score_head randomly initialized)
+        policy_model = CandidateRankingModel(base_model, config.num_candidates)
+        
+        # Position on device
+        if num_gpus > 1 and hasattr(base_model, 'hf_device_map'):
+            last_device = list(base_model.hf_device_map.values())[-1]
+            policy_model.score_head = policy_model.score_head.to(last_device)
+            logger.info(f"Score_head on {last_device}")
+        elif num_gpus <= 1:
+            policy_model = policy_model.to(config.device)
     
     # Create reference model (frozen copy)
     logger.info("Creating reference model (frozen copy)")
@@ -631,13 +669,15 @@ def load_training_state(output_dir: Path):
 def main():
     parser = argparse.ArgumentParser(description="PPO training for FinQA classification")
     parser.add_argument("--policy_ckpt", type=str, required=True,
-                       help="Path to SFT checkpoint (policy initialization)")
+                       help="Path to SFT checkpoint or base model (e.g., meta-llama/Llama-3.2-3B)")
     parser.add_argument("--config", type=str,
                        help="Path to model config YAML")
     parser.add_argument("--algo_config", type=str,
                        help="Path to PPO algorithm config YAML")
     parser.add_argument("--output_dir", type=str,
                        help="Output directory for PPO checkpoints")
+    parser.add_argument("--from_scratch", action="store_true",
+                       help="Train from base model without SFT (initialize score_head randomly)")
     args = parser.parse_args()
     
     # Load config

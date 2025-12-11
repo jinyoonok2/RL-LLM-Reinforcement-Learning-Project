@@ -1,0 +1,36 @@
+# PPO v3 - Training from base model (no SFT initialization)
+# Use with: python 05_train_ppo.py --policy_ckpt meta-llama/Llama-3.2-3B --algo_config configs/algorithms/ppo_v3.yaml --from_scratch
+
+# Core PPO hyperparameters - EXTRA AGGRESSIVE for cold start
+learning_rate: 1.0e-4        # Even higher for training from scratch
+mini_batch_size: 1
+batch_size: 8
+gradient_accumulation_steps: 8
+
+# PPO algorithm parameters - MORE UPDATES
+ppo_epochs: 10               # More epochs per batch for cold start
+clip_range: 0.4              # Higher clip for larger updates
+clip_range_vf: null
+vf_coef: 0.1
+
+# KL divergence control - VERY RELAXED
+kl_coef: 0.01                # Very low penalty
+target_kl: 0.3               # High target
+
+# Generation parameters
+max_new_tokens: 256
+temperature: 0.7
+top_p: 0.9
+do_sample: true
+
+# Training schedule - MUCH LONGER (cold start needs more time)
+total_ppo_epochs: 50         # 5x longer than v1
+save_freq: 10                # Save every 10 epochs
+eval_freq: 5                 # Evaluate every 5 epochs
+
+# Reward normalization
+normalize_reward: true
+reward_clip: 10.0
+
+# Reference model
+use_reference_model: true

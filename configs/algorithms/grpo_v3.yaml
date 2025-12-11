@@ -1,0 +1,33 @@
+# GRPO v3 - Training from base model (no SFT initialization)
+# Use with: python 06_train_grpo.py --policy_ckpt meta-llama/Llama-3.2-3B --algo_config configs/algorithms/grpo_v3.yaml --from_scratch
+
+# Core GRPO hyperparameters - EXTRA AGGRESSIVE for cold start
+learning_rate: 1.0e-4        # Even higher for training from scratch
+batch_size: 8
+gradient_accumulation_steps: 8
+
+# Group-based optimization - USE ALL CANDIDATES
+group_size: 8                # Use all 8 candidates
+num_groups_per_batch: 1      # Single group comparison
+
+# Loss computation
+use_batch_bonus: true
+group_baseline: "mean"
+
+# Generation parameters
+max_new_tokens: 256
+temperature: 0.7
+top_p: 0.9
+do_sample: true
+
+# Training schedule - MUCH LONGER (cold start needs more time)
+total_epochs: 50             # 5x longer than v1
+save_freq: 10                # Save every 10 epochs
+eval_freq: 5                 # Evaluate every 5 epochs
+
+# Reward normalization
+normalize_reward: true
+reward_clip: 10.0
+
+# Stability
+clip_grad_norm: 1.0

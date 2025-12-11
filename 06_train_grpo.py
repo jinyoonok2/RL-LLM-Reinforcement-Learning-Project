@@ -350,7 +350,7 @@ def setup_model(config: GRPOConfig):
     
     logger.info(f"Loading model from {config.policy_ckpt}")
     
-    # Check for LoRA adapter files
+    # Check for LoRA adapter files (or if it's a base model path)
     policy_path = Path(config.policy_ckpt)
     adapter_config_path = policy_path / "adapter_config.json"
     adapter_model_path = policy_path / "adapter_model.safetensors"
@@ -359,7 +359,8 @@ def setup_model(config: GRPOConfig):
     if not adapter_model_path.exists():
         adapter_model_path = policy_path / "adapter_model.bin"
     
-    has_lora = adapter_config_path.exists() and adapter_model_path.exists()
+    is_base_model = not policy_path.exists() or config.policy_ckpt.startswith("meta-llama/")
+    has_lora = adapter_config_path.exists() and adapter_model_path.exists() and not is_base_model
     
     if has_lora:
         logger.info("Detected LoRA checkpoint")
@@ -395,15 +396,45 @@ def setup_model(config: GRPOConfig):
         elif num_gpus <= 1:
             model = model.to(config.device)
     else:
-        # List what files exist for debugging
-        if policy_path.exists():
-            existing_files = list(policy_path.glob("*"))
-            logger.error(f"LoRA checkpoint not found. Files in {policy_path}:")
-            for f in existing_files:
-                logger.error(f"  - {f.name}")
+        # Initialize from base model (no LoRA, training from scratch)
+        logger.info(f"Initializing from base model (no SFT): {config.base_model}")
+        logger.info("Score_head will be randomly initialized")
+        
+        # Setup LoRA on base model
+        from peft import LoraConfig, get_peft_model, TaskType
+        
+        if num_gpus > 1:
+            base_model = AutoModel.from_pretrained(
+                config.base_model,
+                torch_dtype=dtype,
+                device_map="auto",
+                use_cache=False
+            )
         else:
-            logger.error(f"Checkpoint directory does not exist: {policy_path}")
-        raise FileNotFoundError(f"LoRA checkpoint not found at {config.policy_ckpt}. Need adapter_config.json and adapter_model files.")
+            base_model = AutoModel.from_pretrained(config.base_model, torch_dtype=dtype)
+        
+        # Apply LoRA
+        lora_config = LoraConfig(
+            r=16,
+            lora_alpha=32,
+            target_modules=["q_proj", "v_proj", "o_proj", "gate_proj"],
+            lora_dropout=0.05,
+            bias="none",
+            task_type=TaskType.FEATURE_EXTRACTION
+        )
+        base_model = get_peft_model(base_model, lora_config)
+        base_model.print_trainable_parameters()
+        
+        # Wrap in ranking model (score_head randomly initialized)
+        model = CandidateRankingModel(base_model, config.num_candidates)
+        
+        # Position on device
+        if num_gpus > 1 and hasattr(base_model, 'hf_device_map'):
+            last_device = list(base_model.hf_device_map.values())[-1]
+            model.score_head = model.score_head.to(last_device)
+            logger.info(f"Score_head on {last_device}")
+        elif num_gpus <= 1:
+            model = model.to(config.device)
     
     logger.info("Model loaded successfully")
     return model, tokenizer
@@ -564,13 +595,15 @@ def save_checkpoint(model, tokenizer, output_dir: Path, name: str = "checkpoint"
 def main():
     parser = argparse.ArgumentParser(description="GRPO training for FinQA classification")
     parser.add_argument("--policy_ckpt", type=str, required=True,
-                       help="Path to SFT checkpoint (policy initialization)")
+                       help="Path to SFT checkpoint or base model (e.g., meta-llama/Llama-3.2-3B)")
     parser.add_argument("--config", type=str,
                        help="Path to model config YAML")
     parser.add_argument("--algo_config", type=str,
                        help="Path to GRPO algorithm config YAML")
     parser.add_argument("--output_dir", type=str,
                        help="Output directory for GRPO checkpoints")
+    parser.add_argument("--from_scratch", action="store_true",
+                       help="Train from base model without SFT (initialize score_head randomly)")
     args = parser.parse_args()
     
     # Load config
