@@ -419,27 +419,42 @@ def setup_models(config: PPOConfig):
         elif num_gpus <= 1:
             policy_model = policy_model.to(config.device)
     
-    # Create reference model (frozen copy)
-    logger.info("Creating reference model (frozen copy)")
+    # Create reference model (frozen copy) - always on CPU to save GPU memory
+    logger.info("Creating reference model (frozen copy) - loading to CPU")
     
     if is_base_model:
         # Reference model is also from base (same as policy at initialization)
-        logger.info("Reference model: initializing from base model (same as policy)")
-        ref_model = deepcopy(policy_model)
-    else:
-        # Reference model from checkpoint
-        if num_gpus > 1:
-            ref_base_model = AutoModel.from_pretrained(
-                config.base_model,
-                torch_dtype=dtype,
-                device_map="auto",
-                use_cache=False
-            )
-            ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
-        else:
-            ref_base_model = AutoModel.from_pretrained(config.base_model, torch_dtype=dtype)
-            ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
+        # Load directly to CPU to avoid device mapping issues
+        logger.info("Reference model: initializing from base model (same as policy) on CPU")
+        ref_base_model = AutoModel.from_pretrained(
+            config.base_model,
+            torch_dtype=dtype,
+            use_cache=False
+        )
+        lora_config = LoraConfig(
+            r=16,
+            lora_alpha=32,
+            target_modules=["q_proj", "v_proj", "o_proj", "gate_proj"],
+            lora_dropout=0.05,
+            bias="none",
+            task_type=TaskType.FEATURE_EXTRACTION
+        )
+        ref_base_model = get_peft_model(ref_base_model, lora_config)
+        ref_model = CandidateRankingModel(ref_base_model, config.num_candidates)
         
+        # Copy weights from policy model (state dict only, no device mapping)
+        policy_state = policy_model.state_dict()
+        ref_state = {k: v.cpu() for k, v in policy_state.items()}
+        ref_model.load_state_dict(ref_state)
+        ref_model = ref_model.cpu()
+    else:
+        # Reference model from checkpoint - load to CPU
+        ref_base_model = AutoModel.from_pretrained(
+            config.base_model, 
+            torch_dtype=dtype,
+            use_cache=False
+        )
+        ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
         ref_model = CandidateRankingModel(ref_base_model, config.num_candidates)
         
         # Load score_head for reference
@@ -448,21 +463,12 @@ def setup_models(config: PPOConfig):
             score_head_state = torch.load(score_head_path, map_location='cpu')
             ref_model.score_head.load_state_dict(score_head_state)
         
-        # Position reference model
-        if num_gpus > 1 and hasattr(ref_base_model, 'hf_device_map'):
-            last_device = list(ref_base_model.hf_device_map.values())[-1]
-            ref_model.score_head = ref_model.score_head.to(last_device)
-        elif num_gpus <= 1:
-            ref_model = ref_model.to(config.device)
+        ref_model = ref_model.cpu()
     
     # Freeze reference model
     for param in ref_model.parameters():
         param.requires_grad = False
     ref_model.eval()
-    
-    # Move reference model to CPU to save GPU memory (it's only used for KL computation)
-    logger.info("Moving reference model to CPU to save GPU memory")
-    ref_model = ref_model.cpu()
     
     logger.info("Models loaded successfully")
     return policy_model, ref_model, tokenizer
