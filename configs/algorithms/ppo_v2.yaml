@@ -1,5 +1,5 @@
-# PPO v2 - More aggressive settings for already strong SFT baseline
-# Use with: python 05_train_ppo.py --policy_ckpt outputs/run_001/04_sft_llama3b/best_model --algo_config configs/algorithms/ppo_v2.yaml
+# PPO v2 - Same as v1 for fair comparison (from SFT checkpoint)
+# Use with: python 05_train_ppo.py --policy_ckpt outputs/run_002/04_sft_llama3b/best_model --algo_config configs/algorithms/ppo_v2.yaml --output_dir outputs/run_002/05_ppo_v2
 
 # Core PPO hyperparameters (IDENTICAL to v1 for fair comparison)
 learning_rate: 1.41e-5       # Same as v1

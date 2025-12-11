@@ -1,5 +1,5 @@
 # PPO (Proximal Policy Optimization) Algorithm Configuration
-# Use with: python 05_train_ppo.py --config configs/models/<model>.yaml --algo_config configs/algorithms/ppo.yaml
+# Use with: python 05_train_ppo.py --policy_ckpt outputs/run_002/04_sft_llama3b/best_model --algo_config configs/algorithms/ppo.yaml --output_dir outputs/run_002/05_ppo_v1
 
 # Core PPO hyperparameters
 learning_rate: 1.41e-5
