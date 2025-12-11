@@ -460,6 +460,10 @@ def setup_models(config: PPOConfig):
         param.requires_grad = False
     ref_model.eval()
     
+    # Move reference model to CPU to save GPU memory (it's only used for KL computation)
+    logger.info("Moving reference model to CPU to save GPU memory")
+    ref_model = ref_model.cpu()
+    
     logger.info("Models loaded successfully")
     return policy_model, ref_model, tokenizer
 
@@ -498,9 +502,14 @@ def train_ppo_epoch(
         rewards = batch['rewards'].to(first_device)
         
         # Cache reference model logprobs (only compute once per batch)
+        # Move batch to CPU for reference model computation
         with torch.no_grad():
-            ref_scores = ref_model(input_ids, attention_mask)
+            input_ids_cpu = input_ids.cpu()
+            attention_mask_cpu = attention_mask.cpu()
+            ref_scores = ref_model(input_ids_cpu, attention_mask_cpu)
             ref_logprobs = F.log_softmax(ref_scores, dim=1)
+            # Move back to GPU for policy model
+            ref_logprobs = ref_logprobs.to(input_ids.device)
         
         # PPO update with multiple inner epochs
         for ppo_epoch in range(config.ppo_epochs):
