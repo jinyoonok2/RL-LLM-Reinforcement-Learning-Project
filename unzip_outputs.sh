@@ -9,24 +9,11 @@ fi
 # Create outputs directory if it doesn't exist
 mkdir -p outputs
 
-echo "Unzipping outputs.zip..."
-unzip -o outputs.zip -d .
+echo "Unzipping outputs.zip directly into outputs/ folder..."
+unzip -o outputs.zip -d outputs
 
 if [ $? -eq 0 ]; then
     echo "✅ Successfully unzipped outputs.zip"
-    echo ""
-    
-    # Move run folders into outputs/ if they were extracted to current directory
-    if [ -d "run_001" ]; then
-        echo "Moving run_001 into outputs/..."
-        mv run_001 outputs/
-    fi
-    
-    if [ -d "run_002" ]; then
-        echo "Moving run_002 into outputs/..."
-        mv run_002 outputs/
-    fi
-    
     echo ""
     echo "Contents of outputs/:"
     ls -lh outputs/
