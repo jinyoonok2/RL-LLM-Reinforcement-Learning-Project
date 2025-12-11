@@ -81,7 +81,7 @@ class PPOConfig:
         cfg_dict = load_yaml_config(yaml_path)
         config = cls()
         
-        # Map YAML to config fields (similar to SFT)
+        # Map YAML to config fields - handle both nested and flat YAML structures
         if 'model' in cfg_dict:
             config.base_model = cfg_dict['model'].get('name', config.base_model)
         
@@ -98,6 +98,20 @@ class PPOConfig:
                 config.data_dir = paths['data_dir']
             if 'output_dir' in paths:
                 config.output_dir = paths['output_dir']
+        
+        # Handle flat algorithm config YAML (like ppo.yaml)
+        flat_keys = {
+            'learning_rate', 'batch_size', 'mini_batch_size', 'gradient_accumulation_steps',
+            'ppo_epochs', 'clip_range', 'kl_coef', 'target_kl', 'entropy_coef',
+            'total_ppo_epochs', 'save_freq', 'eval_freq', 'normalize_reward', 'reward_clip'
+        }
+        for key in flat_keys:
+            if key in cfg_dict:
+                # Map total_ppo_epochs to total_epochs
+                if key == 'total_ppo_epochs':
+                    config.total_epochs = cfg_dict[key]
+                else:
+                    setattr(config, key, cfg_dict[key])
         
         return config
 
