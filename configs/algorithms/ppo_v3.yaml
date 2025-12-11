@@ -23,8 +23,8 @@ temperature: 0.7
 top_p: 0.9
 do_sample: true
 
-# Training schedule (IDENTICAL to v1)
-total_ppo_epochs: 10         # Same across all versions for fair comparison
+# Training schedule - LONGER for from-scratch training
+total_ppo_epochs: 20         # 20 epochs to match v1/v2 total budget (10 SFT + 10 RL = 20)
 save_freq: 2                 # Save every 2 epochs
 eval_freq: 2                 # Evaluate every 2 epochs
 
