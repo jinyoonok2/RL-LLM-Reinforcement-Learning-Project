@@ -1,0 +1,37 @@
+# PPO Configuration used in run_001 (OLD CONFIG - for reference only)
+# This configuration was used before optimization changes
+# Do not use for new experiments - use ppo.yaml instead
+
+# Core PPO hyperparameters (original settings)
+learning_rate: 1.41e-5
+mini_batch_size: 1
+batch_size: 4                # Original: larger batch
+gradient_accumulation_steps: 8  # Original: less accumulation
+
+# PPO algorithm parameters
+ppo_epochs: 4                # Original: 4 passes per batch
+clip_range: 0.2
+clip_range_vf: null
+vf_coef: 0.1
+
+# KL divergence control
+kl_coef: 0.05
+target_kl: 0.1
+
+# Generation parameters
+max_new_tokens: 256
+temperature: 0.7
+top_p: 0.9
+do_sample: true
+
+# Training schedule (original)
+total_ppo_epochs: 10         # Original: 10 epochs only
+save_freq: 5
+eval_freq: 2                 # Original: evaluate every 2 epochs
+
+# Reward normalization
+normalize_reward: true
+reward_clip: 10.0
+
+# Reference model
+use_reference_model: true

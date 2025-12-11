@@ -1,0 +1,32 @@
+# GRPO Configuration used in run_001 (OLD CONFIG - for reference only)
+# This configuration was used before optimization changes
+# Do not use for new experiments - use grpo.yaml instead
+
+# Core GRPO hyperparameters (original settings)
+learning_rate: 1.5e-5
+batch_size: 4                # Original: larger batch
+gradient_accumulation_steps: 8  # Original: less accumulation
+
+# GRPO-specific parameters
+group_size: 4                # Number of responses per prompt
+num_groups_per_batch: 2      # Number of prompt groups per batch
+beta: 0.1                    # Regularization coefficient
+
+# Generation parameters
+max_new_tokens: 256
+temperature: 0.7
+top_p: 0.9
+do_sample: true
+
+# Training schedule (original)
+total_grpo_epochs: 10        # Original: 10 epochs only
+save_freq: 5
+eval_freq: 2                 # Original: evaluate every 2 epochs
+
+# Reward normalization
+normalize_reward: true
+reward_clip: 10.0
+
+# Advantage computation
+use_baseline: true           # Subtract mean reward from advantages
+whitening_advantages: true   # Normalize advantages to mean=0, std=1
