@@ -447,13 +447,13 @@ def setup_models(config: PPOConfig):
         if score_head_path.exists():
             score_head_state = torch.load(score_head_path, map_location='cpu')
             ref_model.score_head.load_state_dict(score_head_state)
-    
-    # Position reference model
-    if num_gpus > 1 and hasattr(ref_base_model, 'hf_device_map'):
-        last_device = list(ref_base_model.hf_device_map.values())[-1]
-        ref_model.score_head = ref_model.score_head.to(last_device)
-    elif num_gpus <= 1:
-        ref_model = ref_model.to(config.device)
+        
+        # Position reference model
+        if num_gpus > 1 and hasattr(ref_base_model, 'hf_device_map'):
+            last_device = list(ref_base_model.hf_device_map.values())[-1]
+            ref_model.score_head = ref_model.score_head.to(last_device)
+        elif num_gpus <= 1:
+            ref_model = ref_model.to(config.device)
     
     # Freeze reference model
     for param in ref_model.parameters():
