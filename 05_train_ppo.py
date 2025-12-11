@@ -526,15 +526,8 @@ def train_ppo_epoch(
             
             loss_with_kl = loss + config.kl_coef * kl
             
-            # Backward
-            loss_with_kl.backward()
-            
-            # Gradient accumulation
-            if (ppo_epoch + 1) % config.gradient_accumulation_steps == 0:
-                torch.nn.utils.clip_grad_norm_(policy_model.parameters(), config.max_grad_norm)
-                optimizer.step()
-                scheduler.step()
-                optimizer.zero_grad()
+            # Backward (normalize by gradient accumulation steps)
+            (loss_with_kl / config.gradient_accumulation_steps).backward()
             
             # Track metrics (only from last inner epoch)
             if ppo_epoch == config.ppo_epochs - 1:
@@ -544,6 +537,13 @@ def train_ppo_epoch(
                 total_kl += kl
                 total_reward += rewards.mean().item()
                 num_batches += 1
+        
+        # Gradient accumulation - update every N steps
+        if (step + 1) % config.gradient_accumulation_steps == 0:
+            torch.nn.utils.clip_grad_norm_(policy_model.parameters(), config.max_grad_norm)
+            optimizer.step()
+            scheduler.step()
+            optimizer.zero_grad()
         
         # Logging
         if (step + 1) % config.logging_steps == 0:
@@ -557,9 +557,12 @@ def train_ppo_epoch(
                 'kl': f'{avg_kl:.4f}'
             })
     
-    # Final optimizer step
-    optimizer.step()
-    optimizer.zero_grad()
+    # Final optimizer step (if there are remaining accumulated gradients)
+    if step % config.gradient_accumulation_steps != 0:
+        torch.nn.utils.clip_grad_norm_(policy_model.parameters(), config.max_grad_norm)
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
     
     metrics = {
         'loss': total_loss / num_batches if num_batches > 0 else 0,
