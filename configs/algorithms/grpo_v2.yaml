@@ -4,7 +4,7 @@
 # Core GRPO hyperparameters (IDENTICAL to v1 for fair comparison)
 learning_rate: 1.5e-5        # Same as v1
 batch_size: 4                # Reduced for memory (matches PPO)
-gradient_accumulation_steps: 16  # Maintain effective batch of 64
+gradient_accumulation_steps: 8  # Reduced: effective batch=32 (faster)
 
 # Group-based optimization
 group_size: 4                # Same as v1
@@ -20,10 +20,10 @@ temperature: 0.7
 top_p: 0.9
 do_sample: true
 
-# Training schedule - LONGER for from-scratch training
-total_grpo_epochs: 40        # 40 epochs to match total budget (10 SFT + 30 RL = 40)
+# Training schedule
+total_grpo_epochs: 30        # 30 epochs to match total budget (10 SFT + 20 RL = 30)
 save_freq: 5                 # Save every 5 epochs
-eval_freq: 2                 # Evaluate every 2 epochs
+eval_freq: 5                 # Evaluate every 5 epochs (less frequent)
 
 # Reward normalization
 normalize_reward: true

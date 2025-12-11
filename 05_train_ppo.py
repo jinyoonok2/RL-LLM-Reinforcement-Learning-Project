@@ -49,8 +49,8 @@ class PPOConfig:
     learning_rate: float = 1.41e-5  # Matches ppo.yaml
     batch_size: int = 4  # Matches updated configs (reduced for memory)
     mini_batch_size: int = 1  # Matches configs
-    gradient_accumulation_steps: int = 16  # Matches updated configs
-    ppo_epochs: int = 4  # Matches ppo.yaml
+    gradient_accumulation_steps: int = 8  # Reduced for faster training
+    ppo_epochs: int = 2  # Reduced for faster training
     clip_range: float = 0.2
     kl_coef: float = 0.05
     target_kl: float = 0.1  # Matches ppo.yaml
@@ -60,12 +60,12 @@ class PPOConfig:
     # Training
     num_candidates: int = 8
     max_length: int = 256  # Optimized: covers 99.9% of data, 2x speedup
-    total_epochs: int = 30  # Matches updated ppo.yaml (was 10)
+    total_epochs: int = 20  # Reduced for lighter training
     warmup_steps: int = 50
     max_grad_norm: float = 1.0
     
     # Evaluation
-    eval_freq: int = 2  # Matches updated configs
+    eval_freq: int = 5  # Less frequent for speed
     save_freq: int = 5  # Matches updated configs
     logging_steps: int = 50
     

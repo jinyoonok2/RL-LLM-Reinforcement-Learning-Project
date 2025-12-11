@@ -5,10 +5,10 @@
 learning_rate: 1.41e-5       # Same as v1
 mini_batch_size: 1
 batch_size: 4
-gradient_accumulation_steps: 16
+gradient_accumulation_steps: 8  # Reduced: effective batch=32 (faster)
 
 # PPO algorithm parameters (IDENTICAL to v1)
-ppo_epochs: 4                # Same as v1
+ppo_epochs: 2                # Reduced: 2 passes per batch (faster)
 clip_range: 0.2              # Same as v1
 clip_range_vf: null
 vf_coef: 0.1
@@ -23,10 +23,10 @@ temperature: 0.7
 top_p: 0.9
 do_sample: true
 
-# Training schedule - LONGER for from-scratch training
-total_ppo_epochs: 40         # 40 epochs to match v1/v2 total budget (10 SFT + 30 RL = 40)
+# Training schedule
+total_ppo_epochs: 30         # 30 epochs to match v1 total budget (10 SFT + 20 RL = 30)
 save_freq: 5                 # Save every 5 epochs
-eval_freq: 2                 # Evaluate every 2 epochs
+eval_freq: 5                 # Evaluate every 5 epochs (less frequent)
 
 # Reward normalization
 normalize_reward: true

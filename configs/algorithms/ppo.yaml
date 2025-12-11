@@ -5,10 +5,10 @@
 learning_rate: 1.41e-5
 mini_batch_size: 1
 batch_size: 4
-gradient_accumulation_steps: 16
+gradient_accumulation_steps: 8  # Reduced: effective batch=32 (faster)
 
 # PPO algorithm parameters
-ppo_epochs: 4
+ppo_epochs: 2                # Reduced: 2 passes per batch (faster)
 clip_range: 0.2              # Clipping parameter epsilon
 clip_range_vf: null          # Value function clipping (null = no clipping)
 vf_coef: 0.1                 # Value function loss coefficient
@@ -24,9 +24,9 @@ top_p: 0.9
 do_sample: true
 
 # Training schedule
-total_ppo_epochs: 30         # Sufficient epochs for RL to show improvement
+total_ppo_epochs: 20         # Reduced for lighter training
 save_freq: 5                 # Save checkpoint every N epochs
-eval_freq: 2                 # Evaluate every N epochs
+eval_freq: 5                 # Evaluate every 5 epochs (less frequent)
 
 # Reward normalization
 normalize_reward: true
