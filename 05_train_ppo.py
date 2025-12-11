@@ -45,28 +45,28 @@ class PPOConfig:
     data_dir: str = "datasets/finqa_with_rewards"
     output_dir: str = "outputs/run_001/05_ppo"
     
-    # PPO hyperparameters
-    learning_rate: float = 1e-5
-    batch_size: int = 12  # Increased for better GPU utilization on 2 GPUs
-    mini_batch_size: int = 4  # Half of batch size
-    gradient_accumulation_steps: int = 1  # No accumulation needed
-    ppo_epochs: int = 1  # Single pass is enough with good initialization
+    # PPO hyperparameters (defaults - overridden by YAML configs)
+    learning_rate: float = 1.41e-5  # Matches ppo.yaml
+    batch_size: int = 4  # Matches updated configs (reduced for memory)
+    mini_batch_size: int = 1  # Matches configs
+    gradient_accumulation_steps: int = 16  # Matches updated configs
+    ppo_epochs: int = 4  # Matches ppo.yaml
     clip_range: float = 0.2
     kl_coef: float = 0.05
-    target_kl: float = 0.01
+    target_kl: float = 0.1  # Matches ppo.yaml
     entropy_coef: float = 0.01
     value_coef: float = 0.5
     
     # Training
     num_candidates: int = 8
     max_length: int = 256  # Optimized: covers 99.9% of data, 2x speedup
-    total_epochs: int = 10  # Reduced from 20 (PPO converges faster)
+    total_epochs: int = 30  # Matches updated ppo.yaml (was 10)
     warmup_steps: int = 50
     max_grad_norm: float = 1.0
     
     # Evaluation
-    eval_freq: int = 1  # Evaluate every N epochs
-    save_freq: int = 2  # Save every N epochs
+    eval_freq: int = 2  # Matches updated configs
+    save_freq: int = 5  # Matches updated configs
     logging_steps: int = 50
     
     # Device
