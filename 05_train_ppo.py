@@ -422,24 +422,31 @@ def setup_models(config: PPOConfig):
     # Create reference model (frozen copy)
     logger.info("Creating reference model (frozen copy)")
     
-    if num_gpus > 1:
-        ref_base_model = AutoModel.from_pretrained(
-            config.base_model,
-            torch_dtype=dtype,
-            device_map="auto",
-            use_cache=False
-        )
-        ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
+    if is_base_model:
+        # Reference model is also from base (same as policy at initialization)
+        logger.info("Reference model: initializing from base model (same as policy)")
+        ref_model = deepcopy(policy_model)
     else:
-        ref_base_model = AutoModel.from_pretrained(config.base_model, torch_dtype=dtype)
-        ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
-    
-    ref_model = CandidateRankingModel(ref_base_model, config.num_candidates)
-    
-    # Load score_head for reference
-    if score_head_path.exists():
-        score_head_state = torch.load(score_head_path, map_location='cpu')
-        ref_model.score_head.load_state_dict(score_head_state)
+        # Reference model from checkpoint
+        if num_gpus > 1:
+            ref_base_model = AutoModel.from_pretrained(
+                config.base_model,
+                torch_dtype=dtype,
+                device_map="auto",
+                use_cache=False
+            )
+            ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
+        else:
+            ref_base_model = AutoModel.from_pretrained(config.base_model, torch_dtype=dtype)
+            ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
+        
+        ref_model = CandidateRankingModel(ref_base_model, config.num_candidates)
+        
+        # Load score_head for reference
+        score_head_path = Path(config.policy_ckpt) / "score_head.pt"
+        if score_head_path.exists():
+            score_head_state = torch.load(score_head_path, map_location='cpu')
+            ref_model.score_head.load_state_dict(score_head_state)
     
     # Position reference model
     if num_gpus > 1 and hasattr(ref_base_model, 'hf_device_map'):
