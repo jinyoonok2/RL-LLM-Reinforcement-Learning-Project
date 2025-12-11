@@ -24,9 +24,9 @@ top_p: 0.9
 do_sample: true
 
 # Training schedule
-total_ppo_epochs: 100
-save_freq: 10                # Save checkpoint every N epochs
-eval_freq: 5                 # Evaluate every N epochs
+total_ppo_epochs: 10         # Same across all versions for fair comparison
+save_freq: 2                 # Save checkpoint every N epochs
+eval_freq: 2                 # Evaluate every N epochs
 
 # Reward normalization
 normalize_reward: true
