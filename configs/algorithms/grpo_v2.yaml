@@ -3,8 +3,8 @@
 
 # Core GRPO hyperparameters (IDENTICAL to v1 for fair comparison)
 learning_rate: 1.5e-5        # Same as v1
-batch_size: 4                # Reduced for memory (matches PPO)
-gradient_accumulation_steps: 8  # Reduced: effective batch=32 (faster)
+batch_size: 2                # Reduced for memory (dual model setup)
+gradient_accumulation_steps: 16  # Maintain effective batch=32
 
 # Group-based optimization
 group_size: 4                # Same as v1

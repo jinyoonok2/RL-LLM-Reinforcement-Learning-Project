@@ -47,9 +47,9 @@ class PPOConfig:
     
     # PPO hyperparameters (defaults - overridden by YAML configs)
     learning_rate: float = 1.41e-5  # Matches ppo.yaml
-    batch_size: int = 4  # Matches updated configs (reduced for memory)
+    batch_size: int = 2  # Reduced for dual model memory constraints
     mini_batch_size: int = 1  # Matches configs
-    gradient_accumulation_steps: int = 8  # Reduced for faster training
+    gradient_accumulation_steps: int = 16  # Maintain effective batch=32
     ppo_epochs: int = 2  # Reduced for faster training
     clip_range: float = 0.2
     kl_coef: float = 0.05
