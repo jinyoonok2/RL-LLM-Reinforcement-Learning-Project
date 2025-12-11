@@ -1,18 +1,18 @@
-# GRPO v2 - Improved settings for already strong SFT baseline
-# Use with: python 06_train_grpo.py --policy_ckpt outputs/run_001/04_sft_llama3b/best_model --algo_config configs/algorithms/grpo_v2.yaml
+# GRPO v2 - Training from base model (no SFT initialization, pure RL)
+# Use with: python 06_train_grpo.py --policy_ckpt meta-llama/Llama-3.2-3B --algo_config configs/algorithms/grpo_v2.yaml --output_dir outputs/run_002/06_grpo_v2 --from_scratch
 
-# Core GRPO hyperparameters - MORE AGGRESSIVE
-learning_rate: 5.0e-5        # 3.3x higher for faster adaptation
-batch_size: 8
-gradient_accumulation_steps: 8
+# Core GRPO hyperparameters (IDENTICAL to v1 for fair comparison)
+learning_rate: 1.5e-5        # Same as v1
+batch_size: 4                # Reduced for memory (matches PPO)
+gradient_accumulation_steps: 16  # Maintain effective batch of 64
 
-# Group-based optimization - USE ALL CANDIDATES
-group_size: 8                # Use all 8 candidates (was 4)
-num_groups_per_batch: 1      # Single group comparison
+# Group-based optimization
+group_size: 4                # Same as v1
+num_groups_per_batch: 2      # Same as v1
 
 # Loss computation
 use_batch_bonus: true
-group_baseline: "mean"       # Keep mean baseline
+group_baseline: "mean"
 
 # Generation parameters
 max_new_tokens: 256
@@ -20,8 +20,8 @@ temperature: 0.7
 top_p: 0.9
 do_sample: true
 
-# Training schedule - LONGER
-total_epochs: 30             # 3x longer training
+# Training schedule - LONGER for from-scratch training
+total_grpo_epochs: 40        # 40 epochs to match total budget (10 SFT + 30 RL = 40)
 save_freq: 5                 # Save every 5 epochs
 eval_freq: 2                 # Evaluate every 2 epochs
 

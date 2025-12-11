@@ -3,8 +3,8 @@
 
 # Core GRPO hyperparameters
 learning_rate: 1.5e-5
-batch_size: 8
-gradient_accumulation_steps: 8
+batch_size: 4                # Reduced for memory (matches PPO)
+gradient_accumulation_steps: 16  # Maintain effective batch of 64
 
 # Group-based optimization
 group_size: 4                # Number of samples per prompt to compare
@@ -21,9 +21,9 @@ top_p: 0.9
 do_sample: true
 
 # Training schedule
-total_epochs: 10             # Match PPO for fair comparison
-save_freq: 2                 # Save checkpoint every N epochs
-eval_freq: 1                 # Evaluate every N epochs
+total_grpo_epochs: 30        # Match PPO v1 for fair comparison
+save_freq: 5                 # Save checkpoint every N epochs
+eval_freq: 2                 # Evaluate every N epochs
 
 # Reward normalization
 normalize_reward: true
