@@ -4,8 +4,8 @@
 # Core PPO hyperparameters - EXTRA AGGRESSIVE for cold start
 learning_rate: 1.0e-4        # Even higher for training from scratch
 mini_batch_size: 1
-batch_size: 8
-gradient_accumulation_steps: 8
+batch_size: 4
+gradient_accumulation_steps: 16
 
 # PPO algorithm parameters - MORE UPDATES
 ppo_epochs: 10               # More epochs per batch for cold start

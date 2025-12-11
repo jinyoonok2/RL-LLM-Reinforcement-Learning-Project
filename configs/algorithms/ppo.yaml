@@ -4,8 +4,8 @@
 # Core PPO hyperparameters
 learning_rate: 1.41e-5
 mini_batch_size: 1
-batch_size: 8
-gradient_accumulation_steps: 8
+batch_size: 4
+gradient_accumulation_steps: 16
 
 # PPO algorithm parameters
 ppo_epochs: 4

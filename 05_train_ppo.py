@@ -419,42 +419,27 @@ def setup_models(config: PPOConfig):
         elif num_gpus <= 1:
             policy_model = policy_model.to(config.device)
     
-    # Create reference model (frozen copy) - always on CPU to save GPU memory
-    logger.info("Creating reference model (frozen copy) - loading to CPU")
+    # Create reference model (frozen copy)
+    logger.info("Creating reference model (frozen copy)")
     
     if is_base_model:
         # Reference model is also from base (same as policy at initialization)
-        # Load directly to CPU to avoid device mapping issues
-        logger.info("Reference model: initializing from base model (same as policy) on CPU")
-        ref_base_model = AutoModel.from_pretrained(
-            config.base_model,
-            torch_dtype=dtype,
-            use_cache=False
-        )
-        lora_config = LoraConfig(
-            r=16,
-            lora_alpha=32,
-            target_modules=["q_proj", "v_proj", "o_proj", "gate_proj"],
-            lora_dropout=0.05,
-            bias="none",
-            task_type=TaskType.FEATURE_EXTRACTION
-        )
-        ref_base_model = get_peft_model(ref_base_model, lora_config)
-        ref_model = CandidateRankingModel(ref_base_model, config.num_candidates)
-        
-        # Copy weights from policy model (state dict only, no device mapping)
-        policy_state = policy_model.state_dict()
-        ref_state = {k: v.cpu() for k, v in policy_state.items()}
-        ref_model.load_state_dict(ref_state)
-        ref_model = ref_model.cpu()
+        logger.info("Reference model: initializing from base model (same as policy)")
+        ref_model = deepcopy(policy_model)
     else:
-        # Reference model from checkpoint - load to CPU
-        ref_base_model = AutoModel.from_pretrained(
-            config.base_model, 
-            torch_dtype=dtype,
-            use_cache=False
-        )
-        ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
+        # Reference model from checkpoint
+        if num_gpus > 1:
+            ref_base_model = AutoModel.from_pretrained(
+                config.base_model,
+                torch_dtype=dtype,
+                device_map="auto",
+                use_cache=False
+            )
+            ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
+        else:
+            ref_base_model = AutoModel.from_pretrained(config.base_model, torch_dtype=dtype)
+            ref_base_model = PeftModel.from_pretrained(ref_base_model, config.policy_ckpt)
+        
         ref_model = CandidateRankingModel(ref_base_model, config.num_candidates)
         
         # Load score_head for reference
@@ -463,7 +448,12 @@ def setup_models(config: PPOConfig):
             score_head_state = torch.load(score_head_path, map_location='cpu')
             ref_model.score_head.load_state_dict(score_head_state)
         
-        ref_model = ref_model.cpu()
+        # Position reference model
+        if num_gpus > 1 and hasattr(ref_base_model, 'hf_device_map'):
+            last_device = list(ref_base_model.hf_device_map.values())[-1]
+            ref_model.score_head = ref_model.score_head.to(last_device)
+        elif num_gpus <= 1:
+            ref_model = ref_model.to(config.device)
     
     # Freeze reference model
     for param in ref_model.parameters():
@@ -508,14 +498,9 @@ def train_ppo_epoch(
         rewards = batch['rewards'].to(first_device)
         
         # Cache reference model logprobs (only compute once per batch)
-        # Move batch to CPU for reference model computation
         with torch.no_grad():
-            input_ids_cpu = input_ids.cpu()
-            attention_mask_cpu = attention_mask.cpu()
-            ref_scores = ref_model(input_ids_cpu, attention_mask_cpu)
+            ref_scores = ref_model(input_ids, attention_mask)
             ref_logprobs = F.log_softmax(ref_scores, dim=1)
-            # Move back to GPU for policy model
-            ref_logprobs = ref_logprobs.to(input_ids.device)
         
         # PPO update with multiple inner epochs
         for ppo_epoch in range(config.ppo_epochs):
